@@ -1,0 +1,97 @@
+id: bf59e941-f356-433d-a0d4-30e4cb13c14c_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies PowerShell started with an encoded command by Claude Code or by a shell that Claude Code opened. An agent has no need to hide the script it runs, so an encoded command often means the agent is following instructions injected through a file, web page or tool output.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+    - "logs-windows.sysmon_operational-*"
+  language: eql
+  license: Elastic License v2
+  name: Encoded PowerShell Command Run by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Encoded PowerShell Command Run by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Decode the base64 payload in `process.command_line` and review what it runs.
+    - Review the Claude Code session that ran it: the working directory, the prompt and any files, web pages or MCP tool output the agent read just before.
+    - Check for network connections, file writes or child processes from the same PowerShell process.
+
+    ### False positive analysis
+
+    - Some build and setup scripts pass encoded commands. Exclude them by `process.command_line` once confirmed.
+  query: |
+    process where host.os.type == "windows" and event.type == "start" and
+      process.name : ("powershell.exe", "pwsh.exe") and
+      process.args : ("-enc", "-EncodedCommand", "-ec", "-e") and
+      (process.parent.name : "claude.exe" or process.parent.command_line : "*.claude?shell-snapshots*")
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 73
+  rule_id: bf59e941-f356-433d-a0d4-30e4cb13c14c
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: high
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "Use Case: Threat Detection"
+    - "Tactic: Execution"
+    - "Data Source: Elastic Defend"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Mitre Atlas: AML.T0051"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0002
+        name: Execution
+        reference: "https://attack.mitre.org/tactics/TA0002/"
+      technique:
+        - id: T1059
+          name: Command and Scripting Interpreter
+          reference: "https://attack.mitre.org/techniques/T1059/"
+          subtechnique:
+            - id: T1059.001
+              name: PowerShell
+              reference: "https://attack.mitre.org/techniques/T1059/001/"
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0005
+        name: Defense Evasion
+        reference: "https://attack.mitre.org/tactics/TA0005/"
+      technique:
+        - id: T1027
+          name: Obfuscated Files or Information
+          reference: "https://attack.mitre.org/techniques/T1027/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+        - id: AML.T0051
+          name: LLM Prompt Injection
+          reference: "https://atlas.mitre.org/techniques/AML.T0051/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

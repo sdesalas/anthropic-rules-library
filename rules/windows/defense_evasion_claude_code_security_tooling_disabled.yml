@@ -1,0 +1,96 @@
+id: "738f1260-008d-41dd-9eb5-565503b4cfe9_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code, or a shell it opened, adding a Microsoft Defender exclusion, turning off Defender protections, stopping the Defender service or turning off the Windows firewall.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+    - "logs-windows.sysmon_operational-*"
+  language: eql
+  license: Elastic License v2
+  name: Security Tooling Disabled by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Security Tooling Disabled by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Revert the change, then review what else the session ran after it.
+    - Review the files, web pages and MCP tool output the agent read before the change; injected instructions often ask for this step first.
+    - Check whether the user started Claude Code with a permission mode that lets it run commands without approval.
+
+    ### False positive analysis
+
+    - An exclusion for a build output folder can be legitimate. Confirm the path with the user.
+  query: |
+    process where host.os.type == "windows" and event.type == "start" and
+      (process.parent.name : "claude.exe" or process.parent.command_line : "*.claude?shell-snapshots*") and
+      (
+        (process.name : ("powershell.exe", "pwsh.exe") and
+          process.command_line : (
+            "*Add-MpPreference*-Exclusion*",
+            "*Set-MpPreference*-DisableRealtimeMonitoring*",
+            "*Set-MpPreference*-DisableBehaviorMonitoring*",
+            "*Set-MpPreference*-DisableIOAVProtection*"
+          )) or
+        (process.name : "sc.exe" and process.args : ("stop", "config", "delete") and process.args : "WinDefend") or
+        (process.name : "netsh.exe" and process.args : "advfirewall" and process.args : "off")
+      )
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 73
+  rule_id: "738f1260-008d-41dd-9eb5-565503b4cfe9"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: high
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "Use Case: Threat Detection"
+    - "Tactic: Defense Evasion"
+    - "Data Source: Elastic Defend"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0005
+        name: Defense Evasion
+        reference: "https://attack.mitre.org/tactics/TA0005/"
+      technique:
+        - id: T1562
+          name: Impair Defenses
+          reference: "https://attack.mitre.org/techniques/T1562/"
+          subtechnique:
+            - id: T1562.001
+              name: Disable or Modify Tools
+              reference: "https://attack.mitre.org/techniques/T1562/001/"
+            - id: T1562.004
+              name: Disable or Modify System Firewall
+              reference: "https://attack.mitre.org/techniques/T1562/004/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

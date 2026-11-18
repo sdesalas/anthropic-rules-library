@@ -1,0 +1,85 @@
+id: b5a7c8b1-0f82-4810-9eb7-8f3f618686c3_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies the first time in 14 days that Claude Code, or a shell it opened, runs sudo on a host for a user. Agents usually work with the user's own permissions, so a new sudo call is worth a look.
+  from: now-9m
+  history_window_start: now-14d
+  index:
+    - "logs-endpoint.events.process*"
+  language: kuery
+  license: Elastic License v2
+  name: First Sudo Use by Claude Code on a Host
+  new_terms_fields:
+    - host.id
+    - user.name
+  note: |
+    ## Triage and analysis
+
+    ### Investigating First Sudo Use by Claude Code on a Host
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Review the command run through sudo in `process.args`.
+    - Check whether sudo asked for a password, or whether the user has passwordless sudo.
+    - Review what the user asked Claude Code to do in that session.
+
+    ### False positive analysis
+
+    - Installing system packages needs sudo. Confirm with the user.
+  query: |
+    host.os.type:linux and event.category:process and event.type:start and process.name:sudo and
+      (process.parent.name:claude or process.parent.command_line:*/.claude/shell-snapshots/*)
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 21
+  rule_id: b5a7c8b1-0f82-4810-9eb7-8f3f618686c3
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: low
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Linux"
+    - "Use Case: Threat Detection"
+    - "Tactic: Privilege Escalation"
+    - "Data Source: Elastic Defend"
+    - "Rule Type: New Terms"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0004
+        name: Privilege Escalation
+        reference: "https://attack.mitre.org/tactics/TA0004/"
+      technique:
+        - id: T1548
+          name: Abuse Elevation Control Mechanism
+          reference: "https://attack.mitre.org/techniques/T1548/"
+          subtechnique:
+            - id: T1548.003
+              name: Sudo and Sudo Caching
+              reference: "https://attack.mitre.org/techniques/T1548/003/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: new_terms
+  version: 1

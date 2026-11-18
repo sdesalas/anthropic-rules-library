@@ -1,0 +1,93 @@
+id: "8b6ba9f6-756d-431b-ac88-00e4fcd0c776_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies a Claude Desktop extension bundle (.mcpb or .dxt) written by a web browser. An extension installs an MCP server that runs with the user's access, so one downloaded from a link or a lure deserves a review before it is opened.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.file*"
+  language: eql
+  license: Elastic License v2
+  name: Claude Desktop Extension Downloaded from a Browser
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Claude Desktop Extension Downloaded from a Browser
+
+    ### Possible investigation steps
+
+    - Review where the file came from: the browser history and the quarantine attribute on the file.
+    - Unpack the bundle and review its `manifest.json` and the server it runs before it is installed.
+    - Check whether Claude Desktop installed it, under `~/Library/Application Support/Claude/Claude Extensions`.
+
+    ### False positive analysis
+
+    - Extensions from a known publisher or an internal catalog. Exclude them by `file.name` once confirmed.
+  query: |
+    file where host.os.type == "macos" and event.type == "creation" and
+      file.extension in ("mcpb", "dxt") and
+      process.name like~ (
+        "Google Chrome*", "Microsoft Edge*", "Brave Browser*", "Arc*", "Opera*", "Vivaldi*",
+        "firefox", "Safari", "com.apple.WebKit.Networking"
+      )
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 21
+  rule_id: "8b6ba9f6-756d-431b-ac88-00e4fcd0c776"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: low
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Tactic: Execution"
+    - "Data Source: Elastic Defend"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0010"
+    - "Mitre Atlas: AML.T0110"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0002
+        name: Execution
+        reference: "https://attack.mitre.org/tactics/TA0002/"
+      technique:
+        - id: T1204
+          name: User Execution
+          reference: "https://attack.mitre.org/techniques/T1204/"
+          subtechnique:
+            - id: T1204.002
+              name: Malicious File
+              reference: "https://attack.mitre.org/techniques/T1204/002/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0004
+        name: Initial Access
+        reference: "https://atlas.mitre.org/tactics/AML.TA0004/"
+      technique:
+        - id: AML.T0010
+          name: AI Supply Chain Compromise
+          reference: "https://atlas.mitre.org/techniques/AML.T0010/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0006
+        name: Persistence
+        reference: "https://atlas.mitre.org/tactics/AML.TA0006/"
+      technique:
+        - id: AML.T0110
+          name: AI Agent Tool Poisoning
+          reference: "https://atlas.mitre.org/techniques/AML.T0110/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

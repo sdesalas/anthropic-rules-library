@@ -1,0 +1,90 @@
+id: "8d9365f9-cb9f-493e-b96b-80ee5b11c223_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies a process other than the Claude apps contacting api.anthropic.com for the first time in 14 days on a host. Malware has started to call model APIs to generate commands at run time, and scripts using a personal API key are a form of unapproved AI use.
+  from: now-9m
+  history_window_start: now-14d
+  index:
+    - "logs-endpoint.events.network*"
+  language: kuery
+  license: Elastic License v2
+  name: Anthropic API Contacted by a New Process
+  new_terms_fields:
+    - host.id
+    - process.executable
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Anthropic API Contacted by a New Process
+
+    ### Possible investigation steps
+
+    - Review the process in `process.executable`: is it signed, where did it come from and what started it?
+    - Check where the API key it uses comes from, for example an environment variable or a file next to it.
+    - Review what the process did after the API calls: child processes, file writes and other connections.
+
+    ### False positive analysis
+
+    - Developer tools, SDK scripts and IDE extensions call the API. Exclude approved tools by `process.executable`.
+  query: |
+    event.category:network and
+      (dns.question.name:"api.anthropic.com" or destination.domain:"api.anthropic.com") and
+      not process.name:(claude or claude.exe or Claude or "Claude Helper" or "Claude Helper (Renderer)")
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: "8d9365f9-cb9f-493e-b96b-80ee5b11c223"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Tactic: Command and Control"
+    - "Data Source: Elastic Defend"
+    - "Rule Type: New Terms"
+    - "Threat: Unauthorized AI Usage"
+    - "Mitre Atlas: AML.T0096"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0011
+        name: Command and Control
+        reference: "https://attack.mitre.org/tactics/TA0011/"
+      technique:
+        - id: T1102
+          name: Web Service
+          reference: "https://attack.mitre.org/techniques/T1102/"
+        - id: T1071
+          name: Application Layer Protocol
+          reference: "https://attack.mitre.org/techniques/T1071/"
+          subtechnique:
+            - id: T1071.001
+              name: Web Protocols
+              reference: "https://attack.mitre.org/techniques/T1071/001/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0014
+        name: Command and Control
+        reference: "https://atlas.mitre.org/tactics/AML.TA0014/"
+      technique:
+        - id: AML.T0096
+          name: AI Service API
+          reference: "https://atlas.mitre.org/techniques/AML.T0096/"
+  timestamp_override: event.ingested
+  type: new_terms
+  version: 1

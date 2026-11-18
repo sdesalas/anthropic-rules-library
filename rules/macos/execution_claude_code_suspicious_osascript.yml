@@ -1,0 +1,106 @@
+id: d8ad19c2-2e64-4dba-bcd1-72b08e2a5d80_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code, or a shell it opened, running AppleScript that shows a password dialog, sends keystrokes, reads the clipboard, runs JavaScript in a browser or asks for administrator privileges.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: Suspicious AppleScript Run by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Suspicious AppleScript Run by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Review the script in `process.command_line`. A password dialog is a common way to phish the user's login password.
+    - Check what the agent did with the output, for example writing it to a file or sending it over the network.
+    - Review the content the agent read before it ran the script.
+
+    ### False positive analysis
+
+    - UI automation tasks can send keystrokes. Confirm with the user.
+  query: |
+    process where host.os.type == "macos" and event.type == "start" and process.name == "osascript" and
+      (process.parent.name == "claude" or process.parent.command_line like "*/.claude/shell-snapshots/*") and
+      process.command_line like~ (
+        "*display dialog*hidden answer*",
+        "*keystroke*",
+        "*with administrator privileges*",
+        "*the clipboard*",
+        "*do JavaScript*",
+        "*execute*javascript*"
+      )
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 73
+  rule_id: d8ad19c2-2e64-4dba-bcd1-72b08e2a5d80
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: high
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Tactic: Execution"
+    - "Tactic: Collection"
+    - "Data Source: Elastic Defend"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0002
+        name: Execution
+        reference: "https://attack.mitre.org/tactics/TA0002/"
+      technique:
+        - id: T1059
+          name: Command and Scripting Interpreter
+          reference: "https://attack.mitre.org/techniques/T1059/"
+          subtechnique:
+            - id: T1059.002
+              name: AppleScript
+              reference: "https://attack.mitre.org/techniques/T1059/002/"
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0009
+        name: Collection
+        reference: "https://attack.mitre.org/tactics/TA0009/"
+      technique:
+        - id: T1115
+          name: Clipboard Data
+          reference: "https://attack.mitre.org/techniques/T1115/"
+        - id: T1056
+          name: Input Capture
+          reference: "https://attack.mitre.org/techniques/T1056/"
+          subtechnique:
+            - id: T1056.002
+              name: GUI Input Capture
+              reference: "https://attack.mitre.org/techniques/T1056/002/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

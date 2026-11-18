@@ -1,0 +1,97 @@
+id: "505077cc-1696-4278-a691-c8059f6f448e_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code, or a shell it opened, adding a registry Run key or creating a scheduled task. Coding tasks rarely need to make a program start on its own, so this can be an agent being steered into setting up persistence.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+    - "logs-windows.sysmon_operational-*"
+  language: eql
+  license: Elastic License v2
+  name: Registry Run Key or Scheduled Task Added by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Registry Run Key or Scheduled Task Added by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Review the program the Run key or task points to, and whether it was written by the same session.
+    - Review what the user asked Claude Code to do, and what it read before it added the entry.
+    - Remove the entry and the program it starts if the change was not requested.
+
+    ### False positive analysis
+
+    - Developers sometimes ask an agent to set up a local service or task. Confirm with the user.
+  query: |
+    process where host.os.type == "windows" and event.type == "start" and
+      (process.parent.name : "claude.exe" or process.parent.command_line : "*.claude?shell-snapshots*") and
+      (
+        (process.name : "reg.exe" and process.args : "add" and
+          process.args : ("*\\CurrentVersion\\Run*", "*\\CurrentVersion\\RunOnce*", "*\\Winlogon*")) or
+        (process.name : ("powershell.exe", "pwsh.exe") and
+          process.command_line : ("*New-ItemProperty*", "*Set-ItemProperty*") and
+          process.command_line : ("*CurrentVersion\\Run*", "*CurrentVersion\\RunOnce*")) or
+        (process.name : "schtasks.exe" and process.args : "/create")
+      )
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: "505077cc-1696-4278-a691-c8059f6f448e"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "Use Case: Threat Detection"
+    - "Tactic: Persistence"
+    - "Data Source: Elastic Defend"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0003
+        name: Persistence
+        reference: "https://attack.mitre.org/tactics/TA0003/"
+      technique:
+        - id: T1547
+          name: Boot or Logon Autostart Execution
+          reference: "https://attack.mitre.org/techniques/T1547/"
+          subtechnique:
+            - id: T1547.001
+              name: Registry Run Keys / Startup Folder
+              reference: "https://attack.mitre.org/techniques/T1547/001/"
+        - id: T1053
+          name: Scheduled Task/Job
+          reference: "https://attack.mitre.org/techniques/T1053/"
+          subtechnique:
+            - id: T1053.005
+              name: Scheduled Task
+              reference: "https://attack.mitre.org/techniques/T1053/005/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

@@ -1,0 +1,98 @@
+id: f4a5e7de-5755-4039-b7c1-a50e97bb9f29_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code, or a shell it opened, starting a reverse shell through /dev/tcp, netcat or socat. This gives a remote party an interactive shell with the developer's access, and is a common goal of prompt injection against coding agents.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+    - "auditbeat-*"
+    - "logs-auditd_manager.auditd-*"
+  language: eql
+  license: Elastic License v2
+  name: Reverse Shell Started by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Reverse Shell Started by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Review the destination address and port in `process.command_line`, and isolate the host if it is not expected.
+    - Find the content that led the agent to run the command: a README, an issue, a web page or MCP tool output.
+    - Rotate the credentials available to the user, since the remote party had a shell with them.
+
+    ### False positive analysis
+
+    - Network tests sometimes open a /dev/tcp socket to check a port. Exclude them by `process.command_line` once confirmed.
+  query: |
+    process where host.os.type == "linux" and event.type == "start" and
+      event.action in ("exec", "exec_event", "start", "executed", "process_started") and
+      (process.parent.name == "claude" or
+        process.parent.command_line like "*/.claude/shell-snapshots/*" or
+        process.command_line like "*/.claude/shell-snapshots/*") and
+      (
+        process.command_line like ("*/dev/tcp/*", "*/dev/udp/*") or
+        (process.name in ("nc", "ncat", "netcat", "nc.openbsd", "nc.traditional") and process.args in ("-e", "-c")) or
+        (process.name == "socat" and process.args like~ ("exec:*", "system:*"))
+      )
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+    - package: auditd_manager
+      version: ">=1.18.0"
+  risk_score: 99
+  rule_id: f4a5e7de-5755-4039-b7c1-a50e97bb9f29
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: critical
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Linux"
+    - "Use Case: Threat Detection"
+    - "Tactic: Execution"
+    - "Data Source: Elastic Defend"
+    - "Data Source: Auditd Manager"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Mitre Atlas: AML.T0051"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0002
+        name: Execution
+        reference: "https://attack.mitre.org/tactics/TA0002/"
+      technique:
+        - id: T1059
+          name: Command and Scripting Interpreter
+          reference: "https://attack.mitre.org/techniques/T1059/"
+          subtechnique:
+            - id: T1059.004
+              name: Unix Shell
+              reference: "https://attack.mitre.org/techniques/T1059/004/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+        - id: AML.T0051
+          name: LLM Prompt Injection
+          reference: "https://atlas.mitre.org/techniques/AML.T0051/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

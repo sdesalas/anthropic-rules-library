@@ -1,0 +1,93 @@
+id: "5f7a4a96-76ba-4a4d-b218-2668240b85c7_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code started in headless mode (-p or --print) by a scheduler, a service manager or a web server, the first time in 14 days for that host and parent. An agent run on a schedule or from a web request can be persistence that uses the agent to run its commands.
+  from: now-9m
+  history_window_start: now-14d
+  index:
+    - "logs-endpoint.events.process*"
+  language: kuery
+  license: Elastic License v2
+  name: Headless Claude Code Started by a Scheduler or Server
+  new_terms_fields:
+    - host.id
+    - process.parent.name
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Headless Claude Code Started by a Scheduler or Server
+
+    ### Possible investigation steps
+
+    - Find the cron entry, launch agent, systemd unit or scheduled task that starts it.
+    - Review the prompt in `process.args` and the permission flags it runs with.
+    - Check who created the schedule and when.
+
+    ### False positive analysis
+
+    - Teams run Claude Code from CI or on a schedule for maintenance tasks. Exclude those hosts once confirmed.
+  query: |
+    event.category:process and event.type:start and process.name:(claude or claude.exe) and
+      process.args:("-p" or "--print") and
+      process.parent.name:(
+        cron or crond or anacron or atd or systemd or launchd or
+        taskeng.exe or taskhostw.exe or svchost.exe or wmiprvse.exe or
+        w3wp.exe or httpd or nginx or apache2 or php-fpm or java
+      )
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: "5f7a4a96-76ba-4a4d-b218-2668240b85c7"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Tactic: Persistence"
+    - "Data Source: Elastic Defend"
+    - "Rule Type: New Terms"
+    - "Mitre Atlas: AML.T0103"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0003
+        name: Persistence
+        reference: "https://attack.mitre.org/tactics/TA0003/"
+      technique:
+        - id: T1053
+          name: Scheduled Task/Job
+          reference: "https://attack.mitre.org/techniques/T1053/"
+          subtechnique:
+            - id: T1053.003
+              name: Cron
+              reference: "https://attack.mitre.org/techniques/T1053/003/"
+            - id: T1053.005
+              name: Scheduled Task
+              reference: "https://attack.mitre.org/techniques/T1053/005/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0103
+          name: Deploy AI Agent
+          reference: "https://atlas.mitre.org/techniques/AML.T0103/"
+  timestamp_override: event.ingested
+  type: new_terms
+  version: 1

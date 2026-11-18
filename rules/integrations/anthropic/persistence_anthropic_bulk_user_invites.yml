@@ -1,0 +1,79 @@
+id: df044f20-1efd-415a-ba14-c1d088446bfc_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies one user sending ten or more invites to the Anthropic organization within the rule window. A compromised admin account can add outside accounts in bulk to keep access to the organization's chats, projects and API usage.
+  from: now-9m
+  index:
+    - "logs-anthropic.audit-*"
+  language: kuery
+  license: Elastic License v2
+  name: Multiple Anthropic Organization Invites Sent by One User
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Multiple Anthropic Organization Invites Sent by One User
+
+    ### Possible investigation steps
+
+    - Review the invited addresses and their domains.
+    - Confirm with the user who sent the invites, and check how they signed in.
+    - Revoke pending invites and remove accounts that were not expected.
+
+    ### False positive analysis
+
+    - Onboarding a team at once. Confirm with the organization admins.
+  query: |
+    data_stream.dataset:"anthropic.audit" and event.action:"org_user_invite_sent" and event.outcome:"success"
+  related_integrations:
+    - package: anthropic
+      version: ">=1.0.0"
+  risk_score: 47
+  rule_id: df044f20-1efd-415a-ba14-c1d088446bfc
+  setup: |
+    ## Setup
+
+    This rule requires the Anthropic integration to be installed and collecting audit logs from the Anthropic Compliance API.
+  severity: medium
+  tags:
+    - "Domain: GenAI"
+    - "Domain: SaaS"
+    - "Platform: Anthropic"
+    - "Data Source: Anthropic Audit Logs"
+    - "Use Case: Threat Detection"
+    - "Tactic: Persistence"
+    - "Rule Type: Threshold"
+    - "Mitre Atlas: AML.T0125"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0003
+        name: Persistence
+        reference: "https://attack.mitre.org/tactics/TA0003/"
+      technique:
+        - id: T1136
+          name: Create Account
+          reference: "https://attack.mitre.org/techniques/T1136/"
+          subtechnique:
+            - id: T1136.003
+              name: Cloud Account
+              reference: "https://attack.mitre.org/techniques/T1136/003/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0006
+        name: Persistence
+        reference: "https://atlas.mitre.org/tactics/AML.TA0006/"
+      technique:
+        - id: AML.T0125
+          name: Create Account
+          reference: "https://atlas.mitre.org/techniques/AML.T0125/"
+  threshold:
+    field:
+      - user.email
+    value: 10
+  timestamp_override: event.ingested
+  type: threshold
+  version: 1

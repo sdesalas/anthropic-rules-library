@@ -1,0 +1,96 @@
+id: f9b36958-076a-493a-a005-031e07b8cae2_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies a user creating and deleting Anthropic admin API keys within the same hour. A short-lived admin key can be used to change the organization and then removed to leave less to find.
+  from: now-65m
+  interval: "30m"
+  language: esql
+  license: Elastic License v2
+  name: Anthropic Admin API Key Created and Deleted in a Short Window
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Anthropic Admin API Key Created and Deleted in a Short Window
+
+    ### Possible investigation steps
+
+    - Review all audit events between `Esql.timestamp_first_seen` and `Esql.timestamp_last_seen`, including those made with the key.
+    - Check the source addresses and user agents against the user's usual ones.
+    - Confirm with the user, and reset their session if they did not do it.
+
+    ### False positive analysis
+
+    - Admins testing an automation may create and delete a key. Confirm with the user.
+  query: |
+    from logs-anthropic.audit-*
+    | where data_stream.dataset == "anthropic.audit" and
+        event.action in ("admin_api_key_created", "admin_api_key_deleted")
+    | stats
+        Esql.event_action_values = values(event.action),
+        Esql.event_count = count(*),
+        Esql.source_ip_values = values(source.ip),
+        Esql.user_agent_original_values = values(user_agent.original),
+        Esql.timestamp_first_seen = min(@timestamp),
+        Esql.timestamp_last_seen = max(@timestamp)
+      by user.email
+    | where mv_contains(Esql.event_action_values, "admin_api_key_created") and
+        mv_contains(Esql.event_action_values, "admin_api_key_deleted")
+    | keep user.email, Esql.*
+  related_integrations:
+    - package: anthropic
+      version: ">=1.0.0"
+  risk_score: 47
+  rule_id: f9b36958-076a-493a-a005-031e07b8cae2
+  setup: |
+    ## Setup
+
+    This rule requires the Anthropic integration to be installed and collecting audit logs from the Anthropic Compliance API.
+  severity: medium
+  tags:
+    - "Domain: GenAI"
+    - "Domain: SaaS"
+    - "Platform: Anthropic"
+    - "Data Source: Anthropic Audit Logs"
+    - "Use Case: Threat Detection"
+    - "Tactic: Defense Evasion"
+    - "Tactic: Persistence"
+    - "Rule Type: ES|QL"
+    - "Mitre Atlas: AML.T0012"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0005
+        name: Defense Evasion
+        reference: "https://attack.mitre.org/tactics/TA0005/"
+      technique:
+        - id: T1070
+          name: Indicator Removal
+          reference: "https://attack.mitre.org/techniques/T1070/"
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0003
+        name: Persistence
+        reference: "https://attack.mitre.org/tactics/TA0003/"
+      technique:
+        - id: T1098
+          name: Account Manipulation
+          reference: "https://attack.mitre.org/techniques/T1098/"
+          subtechnique:
+            - id: T1098.001
+              name: Additional Cloud Credentials
+              reference: "https://attack.mitre.org/techniques/T1098/001/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0004
+        name: Initial Access
+        reference: "https://atlas.mitre.org/tactics/AML.TA0004/"
+      technique:
+        - id: AML.T0012
+          name: Valid Accounts
+          reference: "https://atlas.mitre.org/techniques/AML.T0012/"
+  type: esql
+  version: 1

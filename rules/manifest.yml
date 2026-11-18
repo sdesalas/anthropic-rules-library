@@ -1,0 +1,25 @@
+categories:
+  - security
+  - siem
+conditions:
+  elastic:
+    capabilities:
+      - security
+    subscription: basic
+  kibana:
+    version: ^9.6.0
+description: Detection rules for AI coding agents, MCP servers and Claude usage
+format_version: 3.0.0
+icons:
+  - size: 32x32
+    src: /anthropic-logo.svg
+    type: image/svg+xml
+name: anthropic_rules_library
+owner:
+  github: sdesalas
+  type: community
+source:
+  license: Elastic-2.0
+title: Anthropic Rules Library
+type: integration
+version: 0.0.1

@@ -1,0 +1,90 @@
+id: "08ba2a72-68e7-4899-9e83-764296eb1f30_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies a Claude model on Amazon Bedrock invoked with a long-term IAM user access key (AKIA) instead of temporary role credentials. Leaked long-term keys are the most common way into LLMjacking, and applications should use roles.
+  from: now-9m
+  index:
+    - "filebeat-*"
+    - "logs-aws.cloudtrail-*"
+  language: kuery
+  license: Elastic License v2
+  name: Claude Model on Bedrock Invoked with a Long-Term Access Key
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Claude Model on Bedrock Invoked with a Long-Term Access Key
+
+    ### Possible investigation steps
+
+    - Find the IAM user that owns the key and where the key is used.
+    - Check `source.ip` and `user_agent.original` for calls from outside your network or tools.
+    - Rotate the key, and move the application to a role if it is legitimate.
+
+    ### False positive analysis
+
+    - Older applications and local scripts may still use IAM user keys. Exclude them by `aws.cloudtrail.user_identity.arn` while they are migrated.
+  query: |
+    event.dataset:aws.cloudtrail and event.provider:bedrock.amazonaws.com and
+      event.action:(InvokeModel or InvokeModelWithResponseStream or Converse or ConverseStream) and
+      aws.cloudtrail.user_identity.access_key_id:AKIA* and aws.cloudtrail.request_parameters:*anthropic.claude*
+  related_integrations:
+    - integration: cloudtrail
+      package: aws
+      version: ">=2.0.0"
+  risk_score: 47
+  rule_id: "08ba2a72-68e7-4899-9e83-764296eb1f30"
+  setup: |
+    ## Setup
+
+    This rule requires the AWS CloudTrail integration to be installed and collecting logs, with Amazon Bedrock API calls recorded in the trail.
+  severity: medium
+  tags:
+    - "Domain: Cloud"
+    - "Domain: GenAI"
+    - "Data Source: AWS"
+    - "Data Source: AWS CloudTrail"
+    - "Data Source: Amazon Bedrock"
+    - "Use Case: Threat Detection"
+    - "Tactic: Initial Access"
+    - "Rule Type: Custom Query"
+    - "Mitre Atlas: AML.T0040"
+    - "Mitre Atlas: AML.T0012"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0001
+        name: Initial Access
+        reference: "https://attack.mitre.org/tactics/TA0001/"
+      technique:
+        - id: T1078
+          name: Valid Accounts
+          reference: "https://attack.mitre.org/techniques/T1078/"
+          subtechnique:
+            - id: T1078.004
+              name: Cloud Accounts
+              reference: "https://attack.mitre.org/techniques/T1078/004/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0000
+        name: AI Model Access
+        reference: "https://atlas.mitre.org/tactics/AML.TA0000/"
+      technique:
+        - id: AML.T0040
+          name: AI Model Inference API Access
+          reference: "https://atlas.mitre.org/techniques/AML.T0040/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0004
+        name: Initial Access
+        reference: "https://atlas.mitre.org/tactics/AML.TA0004/"
+      technique:
+        - id: AML.T0012
+          name: Valid Accounts
+          reference: "https://atlas.mitre.org/techniques/AML.T0012/"
+  timestamp_override: event.ingested
+  type: query
+  version: 1

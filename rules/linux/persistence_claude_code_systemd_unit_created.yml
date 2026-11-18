@@ -1,0 +1,94 @@
+id: "556b4e84-2114-4079-afa7-cf0e3bfd8fc7_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code writing a systemd service or timer file, at system or user level. A unit written by the agent runs again after the session ends, so an unexpected one can be persistence set up through the agent.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.file*"
+  language: eql
+  license: Elastic License v2
+  name: Systemd Unit Created by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Systemd Unit Created by Claude Code
+
+    ### Possible investigation steps
+
+    - Review the unit's `ExecStart` and the program it runs.
+    - Check whether the unit was enabled or started after it was written.
+    - Review what the user asked Claude Code to do in that session.
+
+    ### False positive analysis
+
+    - Developers ask agents to set up services for local development. Confirm with the user and exclude by `file.path` if expected.
+  query: |
+    file where host.os.type == "linux" and event.action in ("creation", "rename") and
+      file.extension in ("service", "timer") and
+      file.path like (
+        "/etc/systemd/system/*",
+        "/usr/lib/systemd/system/*",
+        "/lib/systemd/system/*",
+        "/home/*/.config/systemd/user/*",
+        "/root/.config/systemd/user/*"
+      ) and
+      (process.name == "claude" or process.executable like "*/.local/share/claude/versions/*")
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: "556b4e84-2114-4079-afa7-cf0e3bfd8fc7"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Linux"
+    - "Use Case: Threat Detection"
+    - "Tactic: Persistence"
+    - "Data Source: Elastic Defend"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0003
+        name: Persistence
+        reference: "https://attack.mitre.org/tactics/TA0003/"
+      technique:
+        - id: T1543
+          name: Create or Modify System Process
+          reference: "https://attack.mitre.org/techniques/T1543/"
+          subtechnique:
+            - id: T1543.002
+              name: Systemd Service
+              reference: "https://attack.mitre.org/techniques/T1543/002/"
+        - id: T1053
+          name: Scheduled Task/Job
+          reference: "https://attack.mitre.org/techniques/T1053/"
+          subtechnique:
+            - id: T1053.006
+              name: Systemd Timers
+              reference: "https://attack.mitre.org/techniques/T1053/006/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

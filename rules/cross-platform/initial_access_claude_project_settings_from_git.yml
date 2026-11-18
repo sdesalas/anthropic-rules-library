@@ -1,0 +1,99 @@
+id: bb61fd97-25d8-4dab-9a18-2f5d55d232c5_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies git writing a Claude Code project settings file or an MCP server config while cloning or pulling a repository. Project settings can define hooks and MCP servers that run commands when Claude Code opens the folder, so a repository can ship them to anyone who works on it.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.file*"
+  language: eql
+  license: Elastic License v2
+  name: Claude Code Project Settings Written by Git
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Claude Code Project Settings Written by Git
+
+    ### Possible investigation steps
+
+    - Review the `hooks`, `mcpServers` and `permissions` entries in the file.
+    - Identify the repository and the commit that added the file.
+    - Check whether Claude Code was opened in that folder afterwards, and what its hooks ran.
+
+    ### False positive analysis
+
+    - Many teams commit shared Claude Code settings. Exclude trusted repositories by `file.path` once reviewed.
+  query: |
+    file where event.type == "creation" and
+      process.name : ("git", "git.exe", "git-remote-http*") and
+      file.path : (
+        "*/.claude/settings.json",
+        "*/.claude/settings.local.json",
+        "*/.mcp.json",
+        "*\\.claude\\settings.json",
+        "*\\.claude\\settings.local.json",
+        "*\\.mcp.json"
+      )
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 21
+  rule_id: bb61fd97-25d8-4dab-9a18-2f5d55d232c5
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: low
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Tactic: Initial Access"
+    - "Data Source: Elastic Defend"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0010"
+    - "Mitre Atlas: AML.T0081"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0001
+        name: Initial Access
+        reference: "https://attack.mitre.org/tactics/TA0001/"
+      technique:
+        - id: T1195
+          name: Supply Chain Compromise
+          reference: "https://attack.mitre.org/techniques/T1195/"
+          subtechnique:
+            - id: T1195.002
+              name: Compromise Software Supply Chain
+              reference: "https://attack.mitre.org/techniques/T1195/002/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0004
+        name: Initial Access
+        reference: "https://atlas.mitre.org/tactics/AML.TA0004/"
+      technique:
+        - id: AML.T0010
+          name: AI Supply Chain Compromise
+          reference: "https://atlas.mitre.org/techniques/AML.T0010/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0006
+        name: Persistence
+        reference: "https://atlas.mitre.org/tactics/AML.TA0006/"
+      technique:
+        - id: AML.T0081
+          name: Modify AI Agent Configuration
+          reference: "https://atlas.mitre.org/techniques/AML.T0081/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

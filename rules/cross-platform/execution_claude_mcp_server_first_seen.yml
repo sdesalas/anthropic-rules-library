@@ -1,0 +1,105 @@
+id: de78ea8b-baa0-4cd3-afc0-2e01e3eb091d_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies a command line, not seen in the last 30 days, that Claude Code or Claude Desktop uses to start an MCP server through a package runner or a container. A new MCP server runs code from a package registry or image with the user's access.
+  from: now-9m
+  history_window_start: now-30d
+  index:
+    - "logs-endpoint.events.process*"
+  language: kuery
+  license: Elastic License v2
+  name: New MCP Server Command Started by Claude
+  new_terms_fields:
+    - process.command_line
+  note: |
+    ## Triage and analysis
+
+    ### Investigating New MCP Server Command Started by Claude
+
+    ### Possible investigation steps
+
+    - Identify the package or image in `process.command_line` and check its publisher and age.
+    - Find where the server is defined: the user's settings, a project `.mcp.json` or a Claude Desktop extension.
+    - Review what the server process did: child processes, file reads and connections.
+
+    ### False positive analysis
+
+    - New MCP servers are added often. Exclude approved packages by `process.command_line`.
+  query: |
+    event.category:process and event.type:start and
+      process.parent.name:(claude or claude.exe or Claude or "Claude Helper") and
+      process.name:(npx or npx.cmd or uvx or uvx.exe or bunx or pipx or docker or docker.exe)
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 21
+  rule_id: de78ea8b-baa0-4cd3-afc0-2e01e3eb091d
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: low
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Tactic: Execution"
+    - "Tactic: Initial Access"
+    - "Data Source: Elastic Defend"
+    - "Rule Type: New Terms"
+    - "Mitre Atlas: AML.T0010"
+    - "Mitre Atlas: AML.T0110"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0002
+        name: Execution
+        reference: "https://attack.mitre.org/tactics/TA0002/"
+      technique:
+        - id: T1059
+          name: Command and Scripting Interpreter
+          reference: "https://attack.mitre.org/techniques/T1059/"
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0001
+        name: Initial Access
+        reference: "https://attack.mitre.org/tactics/TA0001/"
+      technique:
+        - id: T1195
+          name: Supply Chain Compromise
+          reference: "https://attack.mitre.org/techniques/T1195/"
+          subtechnique:
+            - id: T1195.002
+              name: Compromise Software Supply Chain
+              reference: "https://attack.mitre.org/techniques/T1195/002/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0004
+        name: Initial Access
+        reference: "https://atlas.mitre.org/tactics/AML.TA0004/"
+      technique:
+        - id: AML.T0010
+          name: AI Supply Chain Compromise
+          reference: "https://atlas.mitre.org/techniques/AML.T0010/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0006
+        name: Persistence
+        reference: "https://atlas.mitre.org/tactics/AML.TA0006/"
+      technique:
+        - id: AML.T0110
+          name: AI Agent Tool Poisoning
+          reference: "https://atlas.mitre.org/techniques/AML.T0110/"
+  timestamp_override: event.ingested
+  type: new_terms
+  version: 1

@@ -1,0 +1,106 @@
+id: "9adb6517-ce85-4716-8a10-ce752d6decea_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code, or a shell it opened, running six or more different host and network discovery commands on one host within the rule window. Coding tasks rarely need this many, and the pattern matches an agent being used to map the host.
+  from: now-9m
+  language: esql
+  license: Elastic License v2
+  name: Burst of Discovery Commands Run by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Burst of Discovery Commands Run by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Review the commands in `Esql.process_command_line_values` and their order.
+    - Review what the user asked Claude Code to do in that session, and the content it read first.
+    - Check for credential reads or outbound connections from the same session.
+
+    ### False positive analysis
+
+    - Asking an agent to debug networking or set up a dev environment can trigger this. Confirm with the user.
+  query: |
+    from logs-endpoint.events.process-*
+    | where event.type == "start" and
+        (process.parent.name in ("claude", "claude.exe") or process.parent.command_line like "*.claude?shell-snapshots*") and
+        process.name in (
+          "whoami", "whoami.exe", "id", "hostname", "hostname.exe", "uname", "sw_vers", "system_profiler",
+          "ifconfig", "ip", "ipconfig.exe", "netstat", "netstat.exe", "ss", "arp", "arp.exe", "route", "route.exe",
+          "ps", "tasklist.exe", "systeminfo.exe", "net.exe", "nltest.exe", "dscl", "getent", "env", "printenv"
+        )
+    | stats
+        Esql.process_name_count_distinct = count_distinct(process.name),
+        Esql.process_name_values = values(process.name),
+        Esql.process_command_line_values = values(process.command_line),
+        Esql.event_count = count(*)
+      by host.id, host.name, user.name
+    | where Esql.process_name_count_distinct >= 6
+    | keep host.id, host.name, user.name, Esql.*
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: "9adb6517-ce85-4716-8a10-ce752d6decea"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Tactic: Discovery"
+    - "Data Source: Elastic Defend"
+    - "Rule Type: ES|QL"
+    - "Mitre Atlas: AML.T0075"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0007
+        name: Discovery
+        reference: "https://attack.mitre.org/tactics/TA0007/"
+      technique:
+        - id: T1082
+          name: System Information Discovery
+          reference: "https://attack.mitre.org/techniques/T1082/"
+        - id: T1016
+          name: System Network Configuration Discovery
+          reference: "https://attack.mitre.org/techniques/T1016/"
+        - id: T1033
+          name: System Owner/User Discovery
+          reference: "https://attack.mitre.org/techniques/T1033/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0008
+        name: Discovery
+        reference: "https://atlas.mitre.org/tactics/AML.TA0008/"
+      technique:
+        - id: AML.T0075
+          name: Enterprise Resource Discovery
+          reference: "https://atlas.mitre.org/techniques/AML.T0075/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  type: esql
+  version: 1
