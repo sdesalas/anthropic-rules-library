@@ -1,0 +1,76 @@
+id: "14dcb363-dd77-52f1-bc1b-f39cd807cba9_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies a plugin marketplace added to Claude Code from the command line. Plugins from a marketplace can bring hooks, commands and MCP servers, so a new source of plugins should be one the organization trusts.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: Claude Code Plugin Marketplace Added from the Command Line
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Claude Code Plugin Marketplace Added from the Command Line
+
+    ### Possible investigation steps
+
+    - Review the marketplace URL or repository in `process.args`.
+    - List the plugins installed from it.
+
+    ### False positive analysis
+
+    - Teams add their internal marketplace. Exclude it by `process.command_line`.
+  query: |
+    process where event.type == "start" and process.name : ("claude", "claude.exe") and
+      process.args : "plugin" and process.args : "marketplace" and process.args : "add"
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 21
+  rule_id: "14dcb363-dd77-52f1-bc1b-f39cd807cba9"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: low
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Persistence"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0010"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0003
+        name: Persistence
+        reference: "https://attack.mitre.org/tactics/TA0003/"
+      technique:
+        - id: T1176
+          name: Software Extensions
+          reference: "https://attack.mitre.org/techniques/T1176/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0004
+        name: Initial Access
+        reference: "https://atlas.mitre.org/tactics/AML.TA0004/"
+      technique:
+        - id: AML.T0010
+          name: AI Supply Chain Compromise
+          reference: "https://atlas.mitre.org/techniques/AML.T0010/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

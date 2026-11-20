@@ -1,0 +1,91 @@
+id: f1239db7-0b20-5e61-8b30-e959f0298d39_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies curl, wget, netcat or PowerShell started from a Claude Code hook script. A hook that reaches out to the network on every agent event can send session data out or pull down commands.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: Network Utility Started by a Claude Code Hook
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Network Utility Started by a Claude Code Hook
+
+    ### Possible investigation steps
+
+    - Review the hook script and the destination in `process.command_line`.
+    - Check what data the hook passes to the network tool.
+
+    ### False positive analysis
+
+    - Teams send hook events to an internal logging endpoint. Exclude that destination.
+  query: |
+    process where event.type == "start" and
+      process.parent.command_line : ("*/.claude/hooks/*", "*\\.claude\\hooks\\*") and
+      process.name : ("curl", "curl.exe", "wget", "nc", "ncat", "powershell.exe", "pwsh.exe")
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: f1239db7-0b20-5e61-8b30-e959f0298d39
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Execution"
+    - "Tactic: Command and Control"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0002
+        name: Execution
+        reference: "https://attack.mitre.org/tactics/TA0002/"
+      technique:
+        - id: T1059
+          name: Command and Scripting Interpreter
+          reference: "https://attack.mitre.org/techniques/T1059/"
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0011
+        name: Command and Control
+        reference: "https://attack.mitre.org/tactics/TA0011/"
+      technique:
+        - id: T1071
+          name: Application Layer Protocol
+          reference: "https://attack.mitre.org/techniques/T1071/"
+          subtechnique:
+            - id: T1071.001
+              name: Web Protocols
+              reference: "https://attack.mitre.org/techniques/T1071/001/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

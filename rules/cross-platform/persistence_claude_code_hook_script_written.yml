@@ -1,0 +1,77 @@
+id: d5b68a36-652c-58e7-b89f-45617358f413_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies a file written to a Claude Code hooks folder by a process other than Claude Code. Hooks run on agent events such as every tool call, so a hook script dropped by another program runs each time the developer uses the agent.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.file*"
+  language: eql
+  license: Elastic License v2
+  name: Claude Code Hook Script Written by Another Process
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Claude Code Hook Script Written by Another Process
+
+    ### Possible investigation steps
+
+    - Review the script and the settings entry that runs it.
+    - Identify the process that wrote it and how it got onto the host.
+
+    ### False positive analysis
+
+    - Dotfile managers and setup scripts install hooks. Exclude them by `process.executable`.
+  query: |
+    file where event.type == "creation" and
+      file.path : ("*/.claude/hooks/*", "*\\.claude\\hooks\\*") and
+      not process.name : ("claude", "claude.exe")
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: d5b68a36-652c-58e7-b89f-45617358f413
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Persistence"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0081"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0003
+        name: Persistence
+        reference: "https://attack.mitre.org/tactics/TA0003/"
+      technique:
+        - id: T1546
+          name: Event Triggered Execution
+          reference: "https://attack.mitre.org/techniques/T1546/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0006
+        name: Persistence
+        reference: "https://atlas.mitre.org/tactics/AML.TA0006/"
+      technique:
+        - id: AML.T0081
+          name: Modify AI Agent Configuration
+          reference: "https://atlas.mitre.org/techniques/AML.T0081/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

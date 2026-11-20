@@ -1,0 +1,84 @@
+id: ad1304b8-e432-5218-b81b-11cbf8e7e0f7_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies the deletion of the Claude Code managed settings file. Managed settings hold the organization's policy for the agent, such as denied commands and allowed MCP servers, and removing the file lifts that policy.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.file*"
+  language: eql
+  license: Elastic License v2
+  name: Claude Code Managed Settings Deleted
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Claude Code Managed Settings Deleted
+
+    ### Possible investigation steps
+
+    - Restore the file from your device management tool.
+    - Identify the user and process that deleted it.
+
+    ### False positive analysis
+
+    - Device management tools replace the file during updates. Exclude their processes.
+  query: |
+    file where event.type == "deletion" and
+      file.path : (
+        "/Library/Application Support/ClaudeCode/managed-settings.json",
+        "/etc/claude-code/managed-settings.json",
+        "?:\\ProgramData\\ClaudeCode\\managed-settings.json"
+      )
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 73
+  rule_id: ad1304b8-e432-5218-b81b-11cbf8e7e0f7
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: high
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Defense Evasion"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0081"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0005
+        name: Defense Evasion
+        reference: "https://attack.mitre.org/tactics/TA0005/"
+      technique:
+        - id: T1562
+          name: Impair Defenses
+          reference: "https://attack.mitre.org/techniques/T1562/"
+          subtechnique:
+            - id: T1562.001
+              name: Disable or Modify Tools
+              reference: "https://attack.mitre.org/techniques/T1562/001/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0006
+        name: Persistence
+        reference: "https://atlas.mitre.org/tactics/AML.TA0006/"
+      technique:
+        - id: AML.T0081
+          name: Modify AI Agent Configuration
+          reference: "https://atlas.mitre.org/techniques/AML.T0081/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1
