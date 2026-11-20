@@ -1,0 +1,83 @@
+id: f818b654-2503-5b70-a59d-5dfd6255c37f_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies an MCP server process connecting to a domain it has not used in the last 14 days. A server that starts talking to a new host after an update may have been changed.
+  from: now-9m
+  history_window_start: now-14d
+  index:
+    - "logs-endpoint.events.network*"
+  language: kuery
+  license: Elastic License v2
+  name: MCP Server Connecting to a New Domain
+  new_terms_fields:
+    - destination.domain
+  note: |
+    ## Triage and analysis
+
+    ### Investigating MCP Server Connecting to a New Domain
+
+    ### Possible investigation steps
+
+    - Review the domain and who owns it.
+    - Check whether the MCP server package was updated recently.
+
+    ### False positive analysis
+
+    - MCP servers for SaaS tools connect to new API hosts. Exclude known domains.
+  query: |
+    event.category:network and event.action:connection_attempted and
+      process.args:(*mcp-server* or *@modelcontextprotocol/* or *mcp_server*)
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 21
+  rule_id: f818b654-2503-5b70-a59d-5dfd6255c37f
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: low
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Command and Control"
+    - "Rule Type: New Terms"
+    - "Mitre Atlas: AML.T0072"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0011
+        name: Command and Control
+        reference: "https://attack.mitre.org/tactics/TA0011/"
+      technique:
+        - id: T1071
+          name: Application Layer Protocol
+          reference: "https://attack.mitre.org/techniques/T1071/"
+          subtechnique:
+            - id: T1071.001
+              name: Web Protocols
+              reference: "https://attack.mitre.org/techniques/T1071/001/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0014
+        name: Command and Control
+        reference: "https://atlas.mitre.org/tactics/AML.TA0014/"
+      technique:
+        - id: AML.T0072
+          name: Cyber Communication Channel
+          reference: "https://atlas.mitre.org/techniques/AML.T0072/"
+  timestamp_override: event.ingested
+  type: new_terms
+  version: 1

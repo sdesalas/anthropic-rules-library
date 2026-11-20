@@ -1,0 +1,87 @@
+id: "3fea6348-0fcd-5f1c-9242-4b135b659d39_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies a command shell started by an MCP server process. Most MCP servers call APIs and do not need a shell, so one that starts a shell may be running commands it was not meant to.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: Shell Started by an MCP Server Process
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Shell Started by an MCP Server Process
+
+    ### Possible investigation steps
+
+    - Identify the MCP server package in `process.parent.args`.
+    - Review the commands the shell ran.
+
+    ### False positive analysis
+
+    - Shell and terminal MCP servers start shells by design. Exclude them by `process.parent.args`.
+  query: |
+    process where event.type == "start" and
+      process.parent.args : ("*mcp-server*", "*@modelcontextprotocol/*", "*mcp_server*") and
+      process.name : ("bash", "sh", "zsh", "cmd.exe", "powershell.exe", "pwsh.exe")
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: "3fea6348-0fcd-5f1c-9242-4b135b659d39"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Execution"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Mitre Atlas: AML.T0110"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0002
+        name: Execution
+        reference: "https://attack.mitre.org/tactics/TA0002/"
+      technique:
+        - id: T1059
+          name: Command and Scripting Interpreter
+          reference: "https://attack.mitre.org/techniques/T1059/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0006
+        name: Persistence
+        reference: "https://atlas.mitre.org/tactics/AML.TA0006/"
+      technique:
+        - id: AML.T0110
+          name: AI Agent Tool Poisoning
+          reference: "https://atlas.mitre.org/techniques/AML.T0110/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

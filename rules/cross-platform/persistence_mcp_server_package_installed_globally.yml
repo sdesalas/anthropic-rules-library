@@ -1,0 +1,82 @@
+id: "4ae17513-9bc3-51c6-b7b8-394ee3b51158_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies an MCP server package installed globally with npm, pnpm, yarn, pip or uv. Global packages stay on the host and run with the user's access each time a client starts them.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: MCP Server Package Installed Globally
+  note: |
+    ## Triage and analysis
+
+    ### Investigating MCP Server Package Installed Globally
+
+    ### Possible investigation steps
+
+    - Identify the package and its publisher.
+    - Check whether a Claude config now refers to it.
+
+    ### False positive analysis
+
+    - Developers install MCP servers they use. Exclude approved packages.
+  query: |
+    process where event.type == "start" and
+      process.name : ("npm", "npm.cmd", "pnpm", "yarn", "pip", "pip3", "uv") and
+      process.args : ("-g", "--global", "install", "tool") and
+      process.command_line : "*mcp*"
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 21
+  rule_id: "4ae17513-9bc3-51c6-b7b8-394ee3b51158"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: low
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Initial Access"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0010"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0001
+        name: Initial Access
+        reference: "https://attack.mitre.org/tactics/TA0001/"
+      technique:
+        - id: T1195
+          name: Supply Chain Compromise
+          reference: "https://attack.mitre.org/techniques/T1195/"
+          subtechnique:
+            - id: T1195.002
+              name: Compromise Software Supply Chain
+              reference: "https://attack.mitre.org/techniques/T1195/002/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0004
+        name: Initial Access
+        reference: "https://atlas.mitre.org/tactics/AML.TA0004/"
+      technique:
+        - id: AML.T0010
+          name: AI Supply Chain Compromise
+          reference: "https://atlas.mitre.org/techniques/AML.T0010/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

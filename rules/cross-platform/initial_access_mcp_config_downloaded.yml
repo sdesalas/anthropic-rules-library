@@ -1,0 +1,81 @@
+id: "11150738-dcdf-52c7-8a55-6d2074c624ee_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies an MCP or Claude Desktop config file written by a web browser. A downloaded config that replaces the user's own can add MCP servers that run on the next start.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.file*"
+  language: eql
+  license: Elastic License v2
+  name: MCP Config File Downloaded by a Browser
+  note: |
+    ## Triage and analysis
+
+    ### Investigating MCP Config File Downloaded by a Browser
+
+    ### Possible investigation steps
+
+    - Review the servers defined in the file.
+    - Find the page it was downloaded from.
+
+    ### False positive analysis
+
+    - Users download sample configs from documentation. Confirm with the user.
+  query: |
+    file where event.type == "creation" and
+      file.name : (".mcp.json", "mcp.json", "claude_desktop_config.json") and
+      process.name : ("chrome.exe", "msedge.exe", "firefox.exe", "Google Chrome*", "Microsoft Edge*", "firefox", "Safari", "brave*")
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 21
+  rule_id: "11150738-dcdf-52c7-8a55-6d2074c624ee"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: low
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Execution"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0010"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0002
+        name: Execution
+        reference: "https://attack.mitre.org/tactics/TA0002/"
+      technique:
+        - id: T1204
+          name: User Execution
+          reference: "https://attack.mitre.org/techniques/T1204/"
+          subtechnique:
+            - id: T1204.002
+              name: Malicious File
+              reference: "https://attack.mitre.org/techniques/T1204/002/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0004
+        name: Initial Access
+        reference: "https://atlas.mitre.org/tactics/AML.TA0004/"
+      technique:
+        - id: AML.T0010
+          name: AI Supply Chain Compromise
+          reference: "https://atlas.mitre.org/techniques/AML.T0010/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1
