@@ -1,0 +1,84 @@
+id: d3f384cb-28fa-53f4-ae7f-a1cf08e922ac_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code running commands on another host with PsExec, WinRS or PowerShell remoting.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: Remote Command Run by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Remote Command Run by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Identify the target host and the account used.
+    - Review what ran on the target.
+
+    ### False positive analysis
+
+    - Administrators use agents to manage servers. Exclude their accounts and hosts.
+  query: |
+    process where host.os.type == "windows" and event.type == "start" and (process.parent.name : "claude.exe" or process.parent.command_line : "*.claude?shell-snapshots*") and
+      (
+        process.name : ("psexec.exe", "psexec64.exe", "winrs.exe") or
+        (process.name : ("powershell.exe", "pwsh.exe") and
+          process.command_line : ("*Invoke-Command*-ComputerName*", "*Enter-PSSession*", "*New-PSSession*"))
+      )
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 73
+  rule_id: d3f384cb-28fa-53f4-ae7f-a1cf08e922ac
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: high
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Lateral Movement"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0008
+        name: Lateral Movement
+        reference: "https://attack.mitre.org/tactics/TA0008/"
+      technique:
+        - id: T1021
+          name: Remote Services
+          reference: "https://attack.mitre.org/techniques/T1021/"
+          subtechnique:
+            - id: T1021.006
+              name: Windows Remote Management
+              reference: "https://attack.mitre.org/techniques/T1021/006/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1
