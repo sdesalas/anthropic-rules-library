@@ -1,0 +1,81 @@
+id: "4886ea77-3f4e-5972-ad7e-18e7b4cedad7_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code writing to a shell profile such as .bashrc or .zshrc. Profiles run in every new shell, so an edit can export keys or run commands long after the session.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.file*"
+  language: eql
+  license: Elastic License v2
+  name: Shell Profile Edited by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Shell Profile Edited by Claude Code
+
+    ### Possible investigation steps
+
+    - Diff the profile against a backup.
+    - Look for exported keys and commands that run on start.
+
+    ### False positive analysis
+
+    - Users ask agents to set up their PATH. Confirm with the user.
+  query: |
+    file where event.action in ("modification", "overwrite", "creation") and
+      file.name : (".bashrc", ".zshrc", ".bash_profile", ".profile", ".zprofile") and
+      process.name : ("claude", "claude.exe")
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: "4886ea77-3f4e-5972-ad7e-18e7b4cedad7"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Persistence"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0003
+        name: Persistence
+        reference: "https://attack.mitre.org/tactics/TA0003/"
+      technique:
+        - id: T1546
+          name: Event Triggered Execution
+          reference: "https://attack.mitre.org/techniques/T1546/"
+          subtechnique:
+            - id: T1546.004
+              name: Unix Shell Configuration Modification
+              reference: "https://attack.mitre.org/techniques/T1546/004/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

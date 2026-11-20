@@ -1,0 +1,77 @@
+id: e302d0e0-f372-59b6-9d14-b30729c80032_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies the first API key created by a user in the last 30 days. A key created from a newly compromised account gives long-lived access that survives a password reset.
+  from: now-9m
+  history_window_start: now-30d
+  index:
+    - "logs-anthropic.audit-*"
+  language: kuery
+  license: Elastic License v2
+  name: Anthropic API Key Created by a New User
+  new_terms_fields:
+    - user.email
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Anthropic API Key Created by a New User
+
+    ### Possible investigation steps
+
+    - Confirm with the user that they created the key.
+    - Review the key's workspace and permissions.
+
+    ### False positive analysis
+
+    - New team members create their first key. Confirm with the user.
+  query: |
+    data_stream.dataset:"anthropic.audit" and event.action:"api_key_created" and event.outcome:"success"
+  related_integrations:
+    - package: anthropic
+      version: ">=1.0.0"
+  risk_score: 21
+  rule_id: e302d0e0-f372-59b6-9d14-b30729c80032
+  setup: |
+    ## Setup
+
+    This rule requires the Anthropic integration to be installed and collecting audit logs from the Anthropic Compliance API.
+  severity: low
+  tags:
+    - "Domain: GenAI"
+    - "Domain: SaaS"
+    - "Platform: Anthropic"
+    - "Data Source: Anthropic Audit Logs"
+    - "Use Case: Threat Detection"
+    - "Tactic: Persistence"
+    - "Rule Type: New Terms"
+    - "Mitre Atlas: AML.T0012"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0003
+        name: Persistence
+        reference: "https://attack.mitre.org/tactics/TA0003/"
+      technique:
+        - id: T1098
+          name: Account Manipulation
+          reference: "https://attack.mitre.org/techniques/T1098/"
+          subtechnique:
+            - id: T1098.001
+              name: Additional Cloud Credentials
+              reference: "https://attack.mitre.org/techniques/T1098/001/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0004
+        name: Initial Access
+        reference: "https://atlas.mitre.org/tactics/AML.TA0004/"
+      technique:
+        - id: AML.T0012
+          name: Valid Accounts
+          reference: "https://atlas.mitre.org/techniques/AML.T0012/"
+  timestamp_override: event.ingested
+  type: new_terms
+  version: 1
