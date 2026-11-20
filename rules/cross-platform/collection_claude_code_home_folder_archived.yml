@@ -1,0 +1,83 @@
+id: "70ad4ef0-e324-529c-819d-ea4e2aa856c7_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code creating an archive of a home folder. An archive of the whole home folder collects keys, tokens and documents into one file that is easy to send out.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: Home Folder Archived by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Home Folder Archived by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Find the archive and check what went into it.
+    - Check whether it was sent anywhere.
+
+    ### False positive analysis
+
+    - Users ask agents to back up a project. Exclude project subfolders.
+  query: |
+    process where event.type == "start" and (process.parent.name : ("claude", "claude.exe") or process.parent.command_line : "*.claude?shell-snapshots*") and
+      process.name : ("tar", "zip", "7z", "7za", "ditto") and
+      process.command_line : ("* ~ *", "* ~/ *", "* /home/*", "* /Users/*", "* /root*")
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: "70ad4ef0-e324-529c-819d-ea4e2aa856c7"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Collection"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0009
+        name: Collection
+        reference: "https://attack.mitre.org/tactics/TA0009/"
+      technique:
+        - id: T1560
+          name: Archive Collected Data
+          reference: "https://attack.mitre.org/techniques/T1560/"
+          subtechnique:
+            - id: T1560.001
+              name: Archive via Utility
+              reference: "https://attack.mitre.org/techniques/T1560/001/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

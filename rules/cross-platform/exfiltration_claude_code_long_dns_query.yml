@@ -1,0 +1,79 @@
+id: fbedb6dc-a4bf-5878-a8b4-250d43852145_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code running dig, nslookup or host with an unusually long command line. Long subdomains are a way to send data out through DNS when other traffic is blocked.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: Long DNS Query Run by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Long DNS Query Run by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Decode the subdomain labels and review the data.
+    - Review the domain and who owns it.
+
+    ### False positive analysis
+
+    - Debugging long internal service names. Confirm with the user.
+  query: |
+    process where event.type == "start" and (process.parent.name : ("claude", "claude.exe") or process.parent.command_line : "*.claude?shell-snapshots*") and
+      process.name : ("dig", "nslookup", "nslookup.exe", "host") and
+      length(process.command_line) > 120
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: fbedb6dc-a4bf-5878-a8b4-250d43852145
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Exfiltration"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0086"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0010
+        name: Exfiltration
+        reference: "https://attack.mitre.org/tactics/TA0010/"
+      technique:
+        - id: T1048
+          name: Exfiltration Over Alternative Protocol
+          reference: "https://attack.mitre.org/techniques/T1048/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0010
+        name: Exfiltration
+        reference: "https://atlas.mitre.org/tactics/AML.TA0010/"
+      technique:
+        - id: AML.T0086
+          name: Exfiltration via AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0086/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1
