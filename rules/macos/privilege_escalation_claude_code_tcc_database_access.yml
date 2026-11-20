@@ -1,0 +1,76 @@
+id: baa871ab-b3a2-5b70-9ca3-91c8148cf98e_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code reading or changing the macOS TCC database, which records which apps may use the camera, microphone, files and screen.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: TCC Database Accessed by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating TCC Database Accessed by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Check whether the database was changed.
+    - Review privacy permissions in System Settings.
+
+    ### False positive analysis
+
+    - None expected.
+  query: |
+    process where host.os.type == "macos" and event.type == "start" and (process.parent.name == "claude" or process.parent.command_line like "*/.claude/shell-snapshots/*") and
+      process.command_line like~ "*/Library/Application Support/com.apple.TCC/TCC.db*"
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 73
+  rule_id: baa871ab-b3a2-5b70-9ca3-91c8148cf98e
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: high
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Privilege Escalation"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0004
+        name: Privilege Escalation
+        reference: "https://attack.mitre.org/tactics/TA0004/"
+      technique:
+        - id: T1548
+          name: Abuse Elevation Control Mechanism
+          reference: "https://attack.mitre.org/techniques/T1548/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1
