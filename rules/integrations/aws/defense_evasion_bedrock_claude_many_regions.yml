@@ -1,0 +1,79 @@
+id: "6f5184bf-e8ec-54e1-9e6a-398c7b31ef03_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies one IAM identity invoking Claude on Bedrock in four or more regions within the rule window. Spreading calls across regions gets around per-region quotas and makes the use harder to notice.
+  from: now-9m
+  language: esql
+  license: Elastic License v2
+  name: Claude on Bedrock Invoked in Many Regions by One Identity
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Claude on Bedrock Invoked in Many Regions by One Identity
+
+    ### Possible investigation steps
+
+    - Review the regions against where you run workloads.
+    - Check whether model access was enabled in those regions recently.
+
+    ### False positive analysis
+
+    - Global applications with regional failover. Exclude their roles.
+  query: |
+    from logs-aws.cloudtrail-*
+    | where event.provider == "bedrock.amazonaws.com" and
+        event.action in ("InvokeModel", "InvokeModelWithResponseStream", "Converse", "ConverseStream") and
+        aws.cloudtrail.request_parameters like "*anthropic.claude*"
+    | stats
+        Esql.cloud_region_count_distinct = count_distinct(cloud.region),
+        Esql.cloud_region_values = values(cloud.region),
+        Esql.event_count = count(*)
+      by aws.cloudtrail.user_identity.arn
+    | where Esql.cloud_region_count_distinct >= 4
+    | keep aws.cloudtrail.user_identity.arn, Esql.*
+  related_integrations:
+    - integration: cloudtrail
+      package: aws
+      version: ">=2.0.0"
+  risk_score: 47
+  rule_id: "6f5184bf-e8ec-54e1-9e6a-398c7b31ef03"
+  setup: |
+    ## Setup
+
+    This rule requires the AWS CloudTrail integration to be installed and collecting logs, with Amazon Bedrock API calls recorded in the trail.
+  severity: medium
+  tags:
+    - "Domain: Cloud"
+    - "Domain: GenAI"
+    - "Data Source: AWS"
+    - "Data Source: AWS CloudTrail"
+    - "Data Source: Amazon Bedrock"
+    - "Use Case: Threat Detection"
+    - "Tactic: Defense Evasion"
+    - "Rule Type: ES|QL"
+    - "Mitre Atlas: AML.T0034"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0005
+        name: Defense Evasion
+        reference: "https://attack.mitre.org/tactics/TA0005/"
+      technique:
+        - id: T1535
+          name: Unused/Unsupported Cloud Regions
+          reference: "https://attack.mitre.org/techniques/T1535/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0011
+        name: Impact
+        reference: "https://atlas.mitre.org/tactics/AML.TA0011/"
+      technique:
+        - id: AML.T0034
+          name: Cost Harvesting
+          reference: "https://atlas.mitre.org/techniques/AML.T0034/"
+  type: esql
+  version: 1

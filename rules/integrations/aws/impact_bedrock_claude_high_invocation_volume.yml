@@ -1,0 +1,79 @@
+id: "2fe9bf85-98f6-505f-9a62-da62ba9dcba1_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies one IAM identity making 1,000 or more Claude invocations on Bedrock within the rule window, a sign of a stolen key being used for resale or bulk generation.
+  from: now-9m
+  index:
+    - "filebeat-*"
+    - "logs-aws.cloudtrail-*"
+  language: kuery
+  license: Elastic License v2
+  name: High Volume of Claude Invocations on Bedrock by One Identity
+  note: |
+    ## Triage and analysis
+
+    ### Investigating High Volume of Claude Invocations on Bedrock by One Identity
+
+    ### Possible investigation steps
+
+    - Review the identity and its usual volume.
+    - Check the cost for the period in AWS billing.
+
+    ### False positive analysis
+
+    - Batch jobs. Exclude their roles.
+  query: |
+    event.dataset:aws.cloudtrail and event.provider:bedrock.amazonaws.com and
+      event.action:(InvokeModel or InvokeModelWithResponseStream or Converse or ConverseStream) and
+      aws.cloudtrail.request_parameters:*anthropic.claude*
+  related_integrations:
+    - integration: cloudtrail
+      package: aws
+      version: ">=2.0.0"
+  risk_score: 47
+  rule_id: "2fe9bf85-98f6-505f-9a62-da62ba9dcba1"
+  setup: |
+    ## Setup
+
+    This rule requires the AWS CloudTrail integration to be installed and collecting logs, with Amazon Bedrock API calls recorded in the trail.
+  severity: medium
+  tags:
+    - "Domain: Cloud"
+    - "Domain: GenAI"
+    - "Data Source: AWS"
+    - "Data Source: AWS CloudTrail"
+    - "Data Source: Amazon Bedrock"
+    - "Use Case: Threat Detection"
+    - "Tactic: Impact"
+    - "Rule Type: Threshold"
+    - "Mitre Atlas: AML.T0034"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0040
+        name: Impact
+        reference: "https://attack.mitre.org/tactics/TA0040/"
+      technique:
+        - id: T1496
+          name: Resource Hijacking
+          reference: "https://attack.mitre.org/techniques/T1496/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0011
+        name: Impact
+        reference: "https://atlas.mitre.org/tactics/AML.TA0011/"
+      technique:
+        - id: AML.T0034
+          name: Cost Harvesting
+          reference: "https://atlas.mitre.org/techniques/AML.T0034/"
+  threshold:
+    field:
+      - aws.cloudtrail.user_identity.arn
+    value: 1000
+  timestamp_override: event.ingested
+  type: threshold
+  version: 1

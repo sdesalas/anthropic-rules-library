@@ -1,0 +1,77 @@
+id: "4c9416c6-9fc9-528d-ac77-ff221603cb19_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies an IAM identity listing Bedrock foundation models or model agreements for the first time in 14 days. Attackers check which models a stolen key can use before they start invoking them.
+  from: now-9m
+  history_window_start: now-14d
+  index:
+    - "filebeat-*"
+    - "logs-aws.cloudtrail-*"
+  language: kuery
+  license: Elastic License v2
+  name: Bedrock Model Access Listed by a New Identity
+  new_terms_fields:
+    - aws.cloudtrail.user_identity.arn
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Bedrock Model Access Listed by a New Identity
+
+    ### Possible investigation steps
+
+    - Check whether the identity is expected to use Bedrock.
+    - Look for invocations that followed.
+
+    ### False positive analysis
+
+    - Developers exploring Bedrock. Confirm with the account owner.
+  query: |
+    event.dataset:aws.cloudtrail and event.provider:bedrock.amazonaws.com and
+      event.action:(ListFoundationModels or GetFoundationModelAvailability or ListFoundationModelAgreementOffers)
+  related_integrations:
+    - integration: cloudtrail
+      package: aws
+      version: ">=2.0.0"
+  risk_score: 21
+  rule_id: "4c9416c6-9fc9-528d-ac77-ff221603cb19"
+  setup: |
+    ## Setup
+
+    This rule requires the AWS CloudTrail integration to be installed and collecting logs, with Amazon Bedrock API calls recorded in the trail.
+  severity: low
+  tags:
+    - "Domain: Cloud"
+    - "Domain: GenAI"
+    - "Data Source: AWS"
+    - "Data Source: AWS CloudTrail"
+    - "Data Source: Amazon Bedrock"
+    - "Use Case: Threat Detection"
+    - "Tactic: Discovery"
+    - "Rule Type: New Terms"
+    - "Mitre Atlas: AML.T0007"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0007
+        name: Discovery
+        reference: "https://attack.mitre.org/tactics/TA0007/"
+      technique:
+        - id: T1580
+          name: Cloud Infrastructure Discovery
+          reference: "https://attack.mitre.org/techniques/T1580/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0008
+        name: Discovery
+        reference: "https://atlas.mitre.org/tactics/AML.TA0008/"
+      technique:
+        - id: AML.T0007
+          name: Discover AI Artifacts
+          reference: "https://atlas.mitre.org/techniques/AML.T0007/"
+  timestamp_override: event.ingested
+  type: new_terms
+  version: 1

@@ -1,0 +1,83 @@
+id: c8f097fc-2c84-5ddd-b6ff-e5d088f51ef9_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies an IAM identity invoking a Claude model on Bedrock from a network organization not seen for it in 14 days. Stolen keys are usually used from hosting providers the owner never uses.
+  from: now-9m
+  history_window_start: now-14d
+  index:
+    - "filebeat-*"
+    - "logs-aws.cloudtrail-*"
+  language: kuery
+  license: Elastic License v2
+  name: Claude Model on Bedrock Invoked from a New Network
+  new_terms_fields:
+    - aws.cloudtrail.user_identity.arn
+    - source.as.organization.name
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Claude Model on Bedrock Invoked from a New Network
+
+    ### Possible investigation steps
+
+    - Review `source.as.organization.name` and `source.ip`.
+    - Check the identity's other activity from that network.
+
+    ### False positive analysis
+
+    - New CI runners or office networks. Exclude them once confirmed.
+  query: |
+    event.dataset:aws.cloudtrail and event.provider:bedrock.amazonaws.com and
+      event.action:(InvokeModel or InvokeModelWithResponseStream or Converse or ConverseStream) and
+      aws.cloudtrail.request_parameters:*anthropic.claude*
+  related_integrations:
+    - integration: cloudtrail
+      package: aws
+      version: ">=2.0.0"
+  risk_score: 21
+  rule_id: c8f097fc-2c84-5ddd-b6ff-e5d088f51ef9
+  setup: |
+    ## Setup
+
+    This rule requires the AWS CloudTrail integration to be installed and collecting logs, with Amazon Bedrock API calls recorded in the trail.
+  severity: low
+  tags:
+    - "Domain: Cloud"
+    - "Domain: GenAI"
+    - "Data Source: AWS"
+    - "Data Source: AWS CloudTrail"
+    - "Data Source: Amazon Bedrock"
+    - "Use Case: Threat Detection"
+    - "Tactic: Initial Access"
+    - "Rule Type: New Terms"
+    - "Mitre Atlas: AML.T0040"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0001
+        name: Initial Access
+        reference: "https://attack.mitre.org/tactics/TA0001/"
+      technique:
+        - id: T1078
+          name: Valid Accounts
+          reference: "https://attack.mitre.org/techniques/T1078/"
+          subtechnique:
+            - id: T1078.004
+              name: Cloud Accounts
+              reference: "https://attack.mitre.org/techniques/T1078/004/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0000
+        name: AI Model Access
+        reference: "https://atlas.mitre.org/tactics/AML.TA0000/"
+      technique:
+        - id: AML.T0040
+          name: AI Model Inference API Access
+          reference: "https://atlas.mitre.org/techniques/AML.T0040/"
+  timestamp_override: event.ingested
+  type: new_terms
+  version: 1

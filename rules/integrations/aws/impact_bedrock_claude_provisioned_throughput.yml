@@ -1,0 +1,75 @@
+id: "72f89880-79b4-54a3-9ced-be5113c44222_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies provisioned throughput created for a Claude model on Bedrock. Provisioned throughput is billed by the hour whether it is used or not, so an unexpected one is costly.
+  from: now-9m
+  index:
+    - "filebeat-*"
+    - "logs-aws.cloudtrail-*"
+  language: kuery
+  license: Elastic License v2
+  name: Provisioned Throughput Created for a Claude Model on Bedrock
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Provisioned Throughput Created for a Claude Model on Bedrock
+
+    ### Possible investigation steps
+
+    - Confirm the purchase with the account owner.
+    - Delete it if it was not approved.
+
+    ### False positive analysis
+
+    - Planned capacity purchases. Confirm with the account owner.
+  query: |
+    event.dataset:aws.cloudtrail and event.provider:bedrock.amazonaws.com and
+      event.action:CreateProvisionedModelThroughput and event.outcome:success and
+      aws.cloudtrail.request_parameters:*anthropic.claude*
+  related_integrations:
+    - integration: cloudtrail
+      package: aws
+      version: ">=2.0.0"
+  risk_score: 47
+  rule_id: "72f89880-79b4-54a3-9ced-be5113c44222"
+  setup: |
+    ## Setup
+
+    This rule requires the AWS CloudTrail integration to be installed and collecting logs, with Amazon Bedrock API calls recorded in the trail.
+  severity: medium
+  tags:
+    - "Domain: Cloud"
+    - "Domain: GenAI"
+    - "Data Source: AWS"
+    - "Data Source: AWS CloudTrail"
+    - "Data Source: Amazon Bedrock"
+    - "Use Case: Threat Detection"
+    - "Tactic: Impact"
+    - "Rule Type: Custom Query"
+    - "Mitre Atlas: AML.T0034"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0040
+        name: Impact
+        reference: "https://attack.mitre.org/tactics/TA0040/"
+      technique:
+        - id: T1496
+          name: Resource Hijacking
+          reference: "https://attack.mitre.org/techniques/T1496/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0011
+        name: Impact
+        reference: "https://atlas.mitre.org/tactics/AML.TA0011/"
+      technique:
+        - id: AML.T0034
+          name: Cost Harvesting
+          reference: "https://atlas.mitre.org/techniques/AML.T0034/"
+  timestamp_override: event.ingested
+  type: query
+  version: 1
