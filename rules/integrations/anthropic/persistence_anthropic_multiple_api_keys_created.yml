@@ -1,0 +1,78 @@
+id: "48fd9805-cfbf-5033-a6a0-e41e53e53945_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies one user creating five or more API keys within the rule window. Bulk key creation can be an attacker setting up spare access before being noticed.
+  from: now-9m
+  index:
+    - "logs-anthropic.audit-*"
+  language: kuery
+  license: Elastic License v2
+  name: Multiple Anthropic API Keys Created by One User
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Multiple Anthropic API Keys Created by One User
+
+    ### Possible investigation steps
+
+    - List the keys and the workspaces they belong to.
+    - Disable keys the user does not recognize.
+
+    ### False positive analysis
+
+    - Automation that rotates keys per service. Exclude its account.
+  query: |
+    data_stream.dataset:"anthropic.audit" and event.action:"api_key_created" and event.outcome:"success"
+  related_integrations:
+    - package: anthropic
+      version: ">=1.0.0"
+  risk_score: 47
+  rule_id: "48fd9805-cfbf-5033-a6a0-e41e53e53945"
+  setup: |
+    ## Setup
+
+    This rule requires the Anthropic integration to be installed and collecting audit logs from the Anthropic Compliance API.
+  severity: medium
+  tags:
+    - "Domain: GenAI"
+    - "Domain: SaaS"
+    - "Platform: Anthropic"
+    - "Data Source: Anthropic Audit Logs"
+    - "Use Case: Threat Detection"
+    - "Tactic: Persistence"
+    - "Rule Type: Threshold"
+    - "Mitre Atlas: AML.T0012"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0003
+        name: Persistence
+        reference: "https://attack.mitre.org/tactics/TA0003/"
+      technique:
+        - id: T1098
+          name: Account Manipulation
+          reference: "https://attack.mitre.org/techniques/T1098/"
+          subtechnique:
+            - id: T1098.001
+              name: Additional Cloud Credentials
+              reference: "https://attack.mitre.org/techniques/T1098/001/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0004
+        name: Initial Access
+        reference: "https://atlas.mitre.org/tactics/AML.TA0004/"
+      technique:
+        - id: AML.T0012
+          name: Valid Accounts
+          reference: "https://atlas.mitre.org/techniques/AML.T0012/"
+  threshold:
+    field:
+      - user.email
+    value: 5
+  timestamp_override: event.ingested
+  type: threshold
+  version: 1
