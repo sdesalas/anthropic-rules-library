@@ -1,0 +1,71 @@
+id: "6a56b15b-6aed-5308-8bd2-749c9f504848_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: "Identifies an organization data export accessed between 20:00 and 06:00 UTC. Exports hold the organization's chats and files, and off-hours access is worth confirming."
+  from: now-9m
+  language: esql
+  license: Elastic License v2
+  name: Anthropic Data Export Accessed Outside Working Hours
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Anthropic Data Export Accessed Outside Working Hours
+
+    ### Possible investigation steps
+
+    - Confirm with the user that they accessed the export.
+    - Check the source address against their usual ones.
+
+    ### False positive analysis
+
+    - Admins in other time zones. Adjust the hours for your organization.
+  query: |
+    from logs-anthropic.audit-* metadata _id, _version, _index
+    | where data_stream.dataset == "anthropic.audit" and event.action == "org_data_export_accessed"
+    | eval Esql.hour_of_day = date_extract("hour_of_day", @timestamp)
+    | where Esql.hour_of_day < 6 or Esql.hour_of_day >= 20
+    | keep _id, _version, _index, @timestamp, event.*, user.*, source.*, Esql.hour_of_day
+  related_integrations:
+    - package: anthropic
+      version: ">=1.0.0"
+  risk_score: 47
+  rule_id: "6a56b15b-6aed-5308-8bd2-749c9f504848"
+  setup: |
+    ## Setup
+
+    This rule requires the Anthropic integration to be installed and collecting audit logs from the Anthropic Compliance API.
+  severity: medium
+  tags:
+    - "Domain: GenAI"
+    - "Domain: SaaS"
+    - "Platform: Anthropic"
+    - "Data Source: Anthropic Audit Logs"
+    - "Use Case: Threat Detection"
+    - "Tactic: Collection"
+    - "Rule Type: ES|QL"
+    - "Mitre Atlas: AML.T0085"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0009
+        name: Collection
+        reference: "https://attack.mitre.org/tactics/TA0009/"
+      technique:
+        - id: T1213
+          name: Data from Information Repositories
+          reference: "https://attack.mitre.org/techniques/T1213/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0009
+        name: Collection
+        reference: "https://atlas.mitre.org/tactics/AML.TA0009/"
+      technique:
+        - id: AML.T0085
+          name: Data from AI Services
+          reference: "https://atlas.mitre.org/techniques/AML.T0085/"
+  type: esql
+  version: 1

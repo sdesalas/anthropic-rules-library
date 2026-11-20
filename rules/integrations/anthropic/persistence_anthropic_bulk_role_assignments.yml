@@ -1,0 +1,78 @@
+id: "7d00456a-1a03-5246-997d-d792e6386364_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies one user granting five or more role assignments within the rule window. Bulk grants can give outside or dormant accounts access to projects and admin settings.
+  from: now-9m
+  index:
+    - "logs-anthropic.audit-*"
+  language: kuery
+  license: Elastic License v2
+  name: Bulk Anthropic Role Assignments by One User
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Bulk Anthropic Role Assignments by One User
+
+    ### Possible investigation steps
+
+    - List the accounts and roles granted.
+    - Revoke grants that were not expected.
+
+    ### False positive analysis
+
+    - Onboarding a team. Confirm with the admin.
+  query: |
+    data_stream.dataset:"anthropic.audit" and event.action:"role_assignment_granted"
+  related_integrations:
+    - package: anthropic
+      version: ">=1.0.0"
+  risk_score: 47
+  rule_id: "7d00456a-1a03-5246-997d-d792e6386364"
+  setup: |
+    ## Setup
+
+    This rule requires the Anthropic integration to be installed and collecting audit logs from the Anthropic Compliance API.
+  severity: medium
+  tags:
+    - "Domain: GenAI"
+    - "Domain: SaaS"
+    - "Platform: Anthropic"
+    - "Data Source: Anthropic Audit Logs"
+    - "Use Case: Threat Detection"
+    - "Tactic: Persistence"
+    - "Rule Type: Threshold"
+    - "Mitre Atlas: AML.T0012"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0003
+        name: Persistence
+        reference: "https://attack.mitre.org/tactics/TA0003/"
+      technique:
+        - id: T1098
+          name: Account Manipulation
+          reference: "https://attack.mitre.org/techniques/T1098/"
+          subtechnique:
+            - id: T1098.003
+              name: Additional Cloud Roles
+              reference: "https://attack.mitre.org/techniques/T1098/003/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0004
+        name: Initial Access
+        reference: "https://atlas.mitre.org/tactics/AML.TA0004/"
+      technique:
+        - id: AML.T0012
+          name: Valid Accounts
+          reference: "https://atlas.mitre.org/techniques/AML.T0012/"
+  threshold:
+    field:
+      - user.email
+    value: 5
+  timestamp_override: event.ingested
+  type: threshold
+  version: 1
