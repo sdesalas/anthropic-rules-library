@@ -1,0 +1,74 @@
+id: "7917e2a0-be47-5c35-97a0-7a7cd6b60359_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies a user creating a chat snapshot from an IP address not seen for them in 14 days. Snapshots make a chat readable by link, so one made from an unknown address is worth a check.
+  from: now-9m
+  history_window_start: now-14d
+  index:
+    - "logs-anthropic.audit-*"
+  language: kuery
+  license: Elastic License v2
+  name: Anthropic Chat Snapshot Created from a New IP
+  new_terms_fields:
+    - user.email
+    - source.ip
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Anthropic Chat Snapshot Created from a New IP
+
+    ### Possible investigation steps
+
+    - Review the chat that was shared.
+    - Check the IP address against the user's usual locations.
+
+    ### False positive analysis
+
+    - Users on travel or a new network. Confirm with the user.
+  query: |
+    data_stream.dataset:"anthropic.audit" and event.action:"claude_chat_snapshot_created"
+  related_integrations:
+    - package: anthropic
+      version: ">=1.0.0"
+  risk_score: 21
+  rule_id: "7917e2a0-be47-5c35-97a0-7a7cd6b60359"
+  setup: |
+    ## Setup
+
+    This rule requires the Anthropic integration to be installed and collecting audit logs from the Anthropic Compliance API.
+  severity: low
+  tags:
+    - "Domain: GenAI"
+    - "Domain: SaaS"
+    - "Platform: Anthropic"
+    - "Data Source: Anthropic Audit Logs"
+    - "Use Case: Threat Detection"
+    - "Tactic: Exfiltration"
+    - "Rule Type: New Terms"
+    - "Mitre Atlas: AML.T0025"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0010
+        name: Exfiltration
+        reference: "https://attack.mitre.org/tactics/TA0010/"
+      technique:
+        - id: T1567
+          name: Exfiltration Over Web Service
+          reference: "https://attack.mitre.org/techniques/T1567/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0010
+        name: Exfiltration
+        reference: "https://atlas.mitre.org/tactics/AML.TA0010/"
+      technique:
+        - id: AML.T0025
+          name: Exfiltration via Cyber Means
+          reference: "https://atlas.mitre.org/techniques/AML.T0025/"
+  timestamp_override: event.ingested
+  type: new_terms
+  version: 1

@@ -1,0 +1,79 @@
+id: b9a29b55-1d3b-58f0-81d7-c25ffcfbee7b_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies a user who uploads ten or more files and deletes ten or more chats within the rule window. Uploading data and then deleting the chats can hide what was shared with Claude.
+  from: now-35m
+  interval: "30m"
+  language: esql
+  license: Elastic License v2
+  name: Anthropic Chats Deleted After Many File Uploads
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Anthropic Chats Deleted After Many File Uploads
+
+    ### Possible investigation steps
+
+    - Review the uploaded file names in the audit log.
+    - Ask the user what the files were for.
+
+    ### False positive analysis
+
+    - Users tidying up after a project. Confirm with the user.
+  query: |
+    from logs-anthropic.audit-*
+    | where data_stream.dataset == "anthropic.audit" and event.action in ("claude_chat_deleted", "claude_file_uploaded")
+    | eval
+        Esql.is_chat_deleted = case(event.action == "claude_chat_deleted", 1, 0),
+        Esql.is_file_uploaded = case(event.action == "claude_file_uploaded", 1, 0)
+    | stats
+        Esql.chat_deleted_count = sum(Esql.is_chat_deleted),
+        Esql.file_uploaded_count = sum(Esql.is_file_uploaded),
+        Esql.source_ip_values = values(source.ip)
+      by user.email
+    | where Esql.chat_deleted_count >= 10 and Esql.file_uploaded_count >= 10
+    | keep user.email, Esql.chat_deleted_count, Esql.file_uploaded_count, Esql.source_ip_values
+  related_integrations:
+    - package: anthropic
+      version: ">=1.0.0"
+  risk_score: 47
+  rule_id: b9a29b55-1d3b-58f0-81d7-c25ffcfbee7b
+  setup: |
+    ## Setup
+
+    This rule requires the Anthropic integration to be installed and collecting audit logs from the Anthropic Compliance API.
+  severity: medium
+  tags:
+    - "Domain: GenAI"
+    - "Domain: SaaS"
+    - "Platform: Anthropic"
+    - "Data Source: Anthropic Audit Logs"
+    - "Use Case: Threat Detection"
+    - "Tactic: Defense Evasion"
+    - "Rule Type: ES|QL"
+    - "Mitre Atlas: AML.T0092"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0005
+        name: Defense Evasion
+        reference: "https://attack.mitre.org/tactics/TA0005/"
+      technique:
+        - id: T1070
+          name: Indicator Removal
+          reference: "https://attack.mitre.org/techniques/T1070/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0007
+        name: Defense Evasion
+        reference: "https://atlas.mitre.org/tactics/AML.TA0007/"
+      technique:
+        - id: AML.T0092
+          name: Manipulate User LLM Chat History
+          reference: "https://atlas.mitre.org/techniques/AML.T0092/"
+  type: esql
+  version: 1

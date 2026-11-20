@@ -1,0 +1,73 @@
+id: "21929e1c-f1f5-5acf-a3cc-4c15bcb4ce30_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies a user removing an extra usage spend limit for the first time in 30 days. Without a limit, a stolen key or account can run up costs.
+  from: now-9m
+  history_window_start: now-30d
+  index:
+    - "logs-anthropic.audit-*"
+  language: kuery
+  license: Elastic License v2
+  name: Anthropic Spend Limit Removed by a New User
+  new_terms_fields:
+    - user.email
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Anthropic Spend Limit Removed by a New User
+
+    ### Possible investigation steps
+
+    - Confirm the change with the billing owner.
+    - Restore the limit if it was not approved.
+
+    ### False positive analysis
+
+    - Finance teams adjust limits at month end. Confirm with them.
+  query: |
+    data_stream.dataset:"anthropic.audit" and event.action:"extra_usage_spend_limit_deleted"
+  related_integrations:
+    - package: anthropic
+      version: ">=1.0.0"
+  risk_score: 21
+  rule_id: "21929e1c-f1f5-5acf-a3cc-4c15bcb4ce30"
+  setup: |
+    ## Setup
+
+    This rule requires the Anthropic integration to be installed and collecting audit logs from the Anthropic Compliance API.
+  severity: low
+  tags:
+    - "Domain: GenAI"
+    - "Domain: SaaS"
+    - "Platform: Anthropic"
+    - "Data Source: Anthropic Audit Logs"
+    - "Use Case: Threat Detection"
+    - "Tactic: Impact"
+    - "Rule Type: New Terms"
+    - "Mitre Atlas: AML.T0034"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0040
+        name: Impact
+        reference: "https://attack.mitre.org/tactics/TA0040/"
+      technique:
+        - id: T1496
+          name: Resource Hijacking
+          reference: "https://attack.mitre.org/techniques/T1496/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0011
+        name: Impact
+        reference: "https://atlas.mitre.org/tactics/AML.TA0011/"
+      technique:
+        - id: AML.T0034
+          name: Cost Harvesting
+          reference: "https://atlas.mitre.org/techniques/AML.T0034/"
+  timestamp_override: event.ingested
+  type: new_terms
+  version: 1
