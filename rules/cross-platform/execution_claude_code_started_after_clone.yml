@@ -1,0 +1,77 @@
+id: "378e2272-686e-5ad9-b55b-d61848bac660_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code started within two minutes of a git clone by the same user. Running an agent straight away on an unknown repository exposes it to any instructions the repository carries.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: Claude Code Started on a Freshly Cloned Repository
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Claude Code Started on a Freshly Cloned Repository
+
+    ### Possible investigation steps
+
+    - Identify the repository URL in the clone command.
+    - Review CLAUDE.md, settings and MCP config in that repository.
+
+    ### False positive analysis
+
+    - This is normal for trusted internal repositories. Raise the severity for external URLs only.
+  query: |
+    sequence by host.id, user.name with maxspan=2m
+      [process where event.type == "start" and process.name : ("git", "git.exe") and process.args : "clone"]
+      [process where event.type == "start" and process.name : ("claude", "claude.exe")]
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 21
+  rule_id: "378e2272-686e-5ad9-b55b-d61848bac660"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: low
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Execution"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0051"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0002
+        name: Execution
+        reference: "https://attack.mitre.org/tactics/TA0002/"
+      technique:
+        - id: T1204
+          name: User Execution
+          reference: "https://attack.mitre.org/techniques/T1204/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0051
+          name: LLM Prompt Injection
+          reference: "https://atlas.mitre.org/techniques/AML.T0051/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

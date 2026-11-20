@@ -1,0 +1,83 @@
+id: "2382c441-d212-519b-bc65-7dacbce2ff70_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code, or a shell it opened, fetching raw content from a paste site or gist. Injected instructions often point the agent at a paste that holds the next stage.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: Paste Site Content Fetched by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Paste Site Content Fetched by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Fetch the URL from a safe host and review the content.
+    - Review what the agent did with the content.
+
+    ### False positive analysis
+
+    - Developers ask agents to read gists. Confirm with the user.
+  query: |
+    process where event.type == "start" and (process.parent.name : ("claude", "claude.exe") or process.parent.command_line : "*.claude?shell-snapshots*") and
+      process.name : ("curl", "curl.exe", "wget", "wget.exe") and
+      process.command_line : ("*pastebin.com/raw*", "*gist.githubusercontent.com*", "*paste.rs*", "*hastebin*", "*rentry.co*")
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: "2382c441-d212-519b-bc65-7dacbce2ff70"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "OS: Linux"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Command and Control"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0051"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0011
+        name: Command and Control
+        reference: "https://attack.mitre.org/tactics/TA0011/"
+      technique:
+        - id: T1105
+          name: Ingress Tool Transfer
+          reference: "https://attack.mitre.org/techniques/T1105/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0051
+          name: LLM Prompt Injection
+          reference: "https://atlas.mitre.org/techniques/AML.T0051/"
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1
