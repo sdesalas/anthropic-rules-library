@@ -1,0 +1,88 @@
+id: df9b2f4c-cee2-5165-b74d-fc0f4ae7f7b7_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code listing domain users, groups, trusts or domain controllers. Domain enumeration is a first step to moving to other hosts.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: Active Directory Enumeration by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Active Directory Enumeration by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Review the commands and their output size.
+    - Check for remote connections from the host afterwards.
+
+    ### False positive analysis
+
+    - IT staff use agents for directory tasks. Exclude their accounts.
+  query: |
+    process where host.os.type == "windows" and event.type == "start" and (process.parent.name : "claude.exe" or process.parent.command_line : "*.claude?shell-snapshots*") and
+      (
+        (process.name : ("net.exe", "net1.exe") and process.args : ("group", "user") and process.args : "/domain") or
+        (process.name : "nltest.exe" and process.args : ("/dclist*", "/domain_trusts*")) or
+        process.name : ("dsquery.exe", "adfind.exe") or
+        (process.name : ("powershell.exe", "pwsh.exe") and process.command_line : ("*Get-ADUser*", "*Get-ADGroup*", "*Get-ADComputer*"))
+      )
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: df9b2f4c-cee2-5165-b74d-fc0f4ae7f7b7
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Discovery"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0075"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0007
+        name: Discovery
+        reference: "https://attack.mitre.org/tactics/TA0007/"
+      technique:
+        - id: T1087
+          name: Account Discovery
+          reference: "https://attack.mitre.org/techniques/T1087/"
+          subtechnique:
+            - id: T1087.002
+              name: Domain Account
+              reference: "https://attack.mitre.org/techniques/T1087/002/"
+        - id: T1482
+          name: Domain Trust Discovery
+          reference: "https://attack.mitre.org/techniques/T1482/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0008
+        name: Discovery
+        reference: "https://atlas.mitre.org/tactics/AML.TA0008/"
+      technique:
+        - id: AML.T0075
+          name: Enterprise Resource Discovery
+          reference: "https://atlas.mitre.org/techniques/AML.T0075/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

@@ -1,0 +1,79 @@
+id: f31f5c5a-d5ce-5aa0-baef-d2407e36f00f_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code writing a file to the user's Startup folder, which runs at every logon.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.file*"
+  language: eql
+  license: Elastic License v2
+  name: Startup Folder File Written by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Startup Folder File Written by Claude Code
+
+    ### Possible investigation steps
+
+    - Review the file and what it starts.
+    - Remove it if it was not requested.
+
+    ### False positive analysis
+
+    - Users ask agents to start a tool at logon. Confirm with the user.
+  query: |
+    file where host.os.type == "windows" and event.type == "creation" and
+      file.path : "?:\\Users\\*\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\*" and
+      process.name : "claude.exe"
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: f31f5c5a-d5ce-5aa0-baef-d2407e36f00f
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Windows"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Persistence"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0003
+        name: Persistence
+        reference: "https://attack.mitre.org/tactics/TA0003/"
+      technique:
+        - id: T1547
+          name: Boot or Logon Autostart Execution
+          reference: "https://attack.mitre.org/techniques/T1547/"
+          subtechnique:
+            - id: T1547.001
+              name: Registry Run Keys / Startup Folder
+              reference: "https://attack.mitre.org/techniques/T1547/001/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1
