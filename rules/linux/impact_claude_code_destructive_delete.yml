@@ -1,0 +1,77 @@
+id: "0f61fe8d-db4b-5be9-a2a9-80eefe4a58b2_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code running a recursive rm on the root, home or system folders. Agents have wiped data with commands like these by mistake or on injected instructions.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: System or Home Folder Deleted by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating System or Home Folder Deleted by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Stop the session and isolate the host.
+    - Restore from backup and review what led to the command.
+
+    ### False positive analysis
+
+    - None expected.
+  query: |
+    process where host.os.type == "linux" and event.type == "start" and (process.parent.name == "claude" or process.parent.command_line like "*/.claude/shell-snapshots/*") and
+      process.name == "rm" and process.args in ("-rf", "-fr", "-r", "-R") and
+      process.args in ("/", "/*", "~", "/home", "/root", "/etc", "/var", "/usr")
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 99
+  rule_id: "0f61fe8d-db4b-5be9-a2a9-80eefe4a58b2"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: critical
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Linux"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Impact"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0101"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0040
+        name: Impact
+        reference: "https://attack.mitre.org/tactics/TA0040/"
+      technique:
+        - id: T1485
+          name: Data Destruction
+          reference: "https://attack.mitre.org/techniques/T1485/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0011
+        name: Impact
+        reference: "https://atlas.mitre.org/tactics/AML.TA0011/"
+      technique:
+        - id: AML.T0101
+          name: Data Destruction via AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0101/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

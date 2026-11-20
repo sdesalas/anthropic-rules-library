@@ -1,0 +1,81 @@
+id: f0d7845a-07c9-5dd3-8b97-8a31084a769d_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code clearing or turning off shell history. There is no reason for an agent to hide earlier commands.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: Shell History Cleared by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Shell History Cleared by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Review the session's other commands.
+    - Recover history from backups or audit logs.
+
+    ### False positive analysis
+
+    - None expected.
+  query: |
+    process where host.os.type == "linux" and event.type == "start" and
+      (process.parent.name == "claude" or process.command_line like "*/.claude/shell-snapshots/*") and
+      process.command_line like~ ("*history -c*", "*rm *.bash_history*", "*rm *.zsh_history*", "*unset HISTFILE*", "*HISTSIZE=0*")
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: f0d7845a-07c9-5dd3-8b97-8a31084a769d
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Linux"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Defense Evasion"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0005
+        name: Defense Evasion
+        reference: "https://attack.mitre.org/tactics/TA0005/"
+      technique:
+        - id: T1070
+          name: Indicator Removal
+          reference: "https://attack.mitre.org/techniques/T1070/"
+          subtechnique:
+            - id: T1070.003
+              name: Clear Command History
+              reference: "https://attack.mitre.org/techniques/T1070/003/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1

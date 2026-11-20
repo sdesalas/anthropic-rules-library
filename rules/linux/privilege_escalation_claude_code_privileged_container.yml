@@ -1,0 +1,77 @@
+id: "7eb23eff-04ab-5c73-a984-bcb9c2ac7e31_1"
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code starting a container that is privileged or mounts the host's root folder. Either one gives the container full control of the host.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: Privileged or Host-Mounted Container Started by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Privileged or Host-Mounted Container Started by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Review the image and the command it ran.
+    - Check the host for changes made from the container.
+
+    ### False positive analysis
+
+    - Some local tooling needs privileged containers. Confirm with the user.
+  query: |
+    process where host.os.type == "linux" and event.type == "start" and (process.parent.name == "claude" or process.parent.command_line like "*/.claude/shell-snapshots/*") and
+      process.name in ("docker", "podman", "nerdctl") and process.args == "run" and
+      (process.args == "--privileged" or process.command_line like ("*-v /:/*", "*--volume /:/*", "*--pid=host*"))
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 73
+  rule_id: "7eb23eff-04ab-5c73-a984-bcb9c2ac7e31"
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: high
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: Linux"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Privilege Escalation"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0105"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0004
+        name: Privilege Escalation
+        reference: "https://attack.mitre.org/tactics/TA0004/"
+      technique:
+        - id: T1611
+          name: Escape to Host
+          reference: "https://attack.mitre.org/techniques/T1611/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0012
+        name: Privilege Escalation
+        reference: "https://atlas.mitre.org/tactics/AML.TA0012/"
+      technique:
+        - id: AML.T0105
+          name: Escape to Host
+          reference: "https://atlas.mitre.org/techniques/AML.T0105/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1
