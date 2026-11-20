@@ -1,0 +1,81 @@
+id: da625bec-0e42-5f1a-9841-6f9f73c79288_1
+type: security-rule
+attributes:
+  author:
+    - Anthropic Rules Library
+  description: Identifies Claude Code removing the quarantine attribute from a file with xattr. That skips the Gatekeeper check the first time a downloaded program runs.
+  from: now-9m
+  index:
+    - "logs-endpoint.events.process*"
+  language: eql
+  license: Elastic License v2
+  name: Quarantine Attribute Removed by Claude Code
+  note: |
+    ## Triage and analysis
+
+    ### Investigating Quarantine Attribute Removed by Claude Code
+
+    Claude Code runs shell commands through a shell that sources a snapshot under `~/.claude/shell-snapshots`, so the rule matches both processes started by the `claude` process and processes started by that shell.
+
+    ### Possible investigation steps
+
+    - Identify the file and where it was downloaded from.
+    - Check its signature and notarization.
+
+    ### False positive analysis
+
+    - Developers clear quarantine on their own builds. Confirm with the user.
+  query: |
+    process where host.os.type == "macos" and event.type == "start" and (process.parent.name == "claude" or process.parent.command_line like "*/.claude/shell-snapshots/*") and
+      process.name == "xattr" and process.args in ("-d", "-dr", "-c", "-cr") and
+      process.command_line like~ "*com.apple.quarantine*"
+  related_integrations:
+    - package: endpoint
+      version: ">=8.2.0"
+  risk_score: 47
+  rule_id: da625bec-0e42-5f1a-9841-6f9f73c79288
+  setup: |
+    ## Setup
+
+    This rule requires data coming in from Elastic Defend.
+
+    ### Elastic Defend Integration Setup
+    Elastic Defend is integrated into the Elastic Agent using Fleet. Upon configuration, the integration allows the Elastic Agent to monitor events on your host and send data to the Elastic Security app.
+  severity: medium
+  tags:
+    - "Domain: Endpoint"
+    - "Domain: GenAI"
+    - "OS: macOS"
+    - "Use Case: Threat Detection"
+    - "Data Source: Elastic Defend"
+    - "Tactic: Defense Evasion"
+    - "Rule Type: Event Correlation (EQL)"
+    - "Mitre Atlas: AML.T0053"
+    - "Resources: Investigation Guide"
+    - "Source: Anthropic Rules Library"
+  threat:
+    - framework: MITRE ATT&CK
+      tactic:
+        id: TA0005
+        name: Defense Evasion
+        reference: "https://attack.mitre.org/tactics/TA0005/"
+      technique:
+        - id: T1553
+          name: Subvert Trust Controls
+          reference: "https://attack.mitre.org/techniques/T1553/"
+          subtechnique:
+            - id: T1553.001
+              name: Gatekeeper Bypass
+              reference: "https://attack.mitre.org/techniques/T1553/001/"
+    - framework: MITRE ATLAS
+      tactic:
+        id: AML.TA0005
+        name: Execution
+        reference: "https://atlas.mitre.org/tactics/AML.TA0005/"
+      technique:
+        - id: AML.T0053
+          name: AI Agent Tool Invocation
+          reference: "https://atlas.mitre.org/techniques/AML.T0053/"
+  timestamp_override: event.ingested
+  type: eql
+  version: 1
