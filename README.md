@@ -1,4 +1,4 @@
-<h1><img src="rules/anthropic-logo.svg" width="32" height="32"/>  Anthropic Rules Library</h1>
+<h1><img src="anthropic-logo.svg" width="32" height="32"/>  Anthropic Rules Library</h1>
 
 A detection rule library in git, with 21 sample rules about AI coding agents, MCP servers and Claude usage. It shows a
 third rule source for Elastic Security, next to the prebuilt rules and
@@ -12,23 +12,22 @@ published or endorsed by Anthropic.
 ## Layout
 
 ```
+manifest.yml                         package manifest (name, version, kibana.version condition)
+changelog.yml                        one entry per release
+anthropic-logo.svg                   the package icon (the manifest's `icons`)
+LICENSE.txt                          Elastic License 2.0 (`source.license: Elastic-2.0`)
 rules/
-  manifest.yml                       package manifest (name, version, kibana.version condition)
-  changelog.yml                      one entry per release
-  NOTICE.txt                         notice shipped with the package
   README.md                          the package description
-  anthropic-logo.svg                 the package icon (the manifest's `icons`)
   windows/<rule file name>.yml       one file per rule
   linux/...
   macos/...
   cross-platform/...
   integrations/anthropic/...         rules for a data source
   integrations/aws/...
-LICENSE.txt                          Elastic License 2.0 (`source.license: Elastic-2.0`)
 ```
 
 - Every folder under `rules/` holds rule files, and only those. The folder a rule is in says where it belongs.
-- The package files stay directly in `rules/`.
+- The package files are at the root, so the manifest, changelog and license also cover exception lists and value lists when they are added.
 - One file per rule. Its git history is its list of versions, so don't add a file per version.
 
 ## Rule files
